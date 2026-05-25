@@ -39,5 +39,5 @@ A spartan, offline-friendly mobile app for fishermen and mushroom pickers. Provi
 - Tokens defined in `frontend/src/theme/colors.ts` and `design_guidelines.json`.
 
 ## Not yet implemented
-- Backend sync of route/markers from device (currently kept in component state)
-- Archive list rendering of past trips
+- Sharing of trips between users (planned: QR-code peer-to-peer sharing as a growth feature).
+- iOS native offline tile cache (`tileCachePath` is Android-only in react-native-maps).
