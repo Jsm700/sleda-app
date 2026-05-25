@@ -37,8 +37,8 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
       testID="map-view"
     >
       <UrlTile
-        urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-        maximumZ={19}
+        urlTemplate="https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
+        maximumZ={20}
         flipY={false}
         tileCachePath={TILE_CACHE_PATH}
         tileCacheMaxAge={60 * 60 * 24 * 30}
