@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,53 +6,137 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional, Literal
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
 app = FastAPI()
-
-# Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
 
-# Define Models
-class StatusCheck(BaseModel):
+# ---------- Models ----------
+MarkerType = Literal["car", "fish", "mushroom", "hazard", "water"]
+
+
+class Marker(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    type: MarkerType
+    latitude: float
+    longitude: float
+    note: Optional[str] = None
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
 
-# Add your routes to the router instead of directly to app
+class RoutePoint(BaseModel):
+    latitude: float
+    longitude: float
+    timestamp: str
+
+
+class Trip(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: Optional[str] = None
+    started_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    ended_at: Optional[str] = None
+    route: List[RoutePoint] = Field(default_factory=list)
+    markers: List[Marker] = Field(default_factory=list)
+    distance_m: float = 0.0
+    duration_s: int = 0
+
+
+class TripCreate(BaseModel):
+    name: Optional[str] = None
+
+
+class TripUpdate(BaseModel):
+    name: Optional[str] = None
+    ended_at: Optional[str] = None
+    route: Optional[List[RoutePoint]] = None
+    markers: Optional[List[Marker]] = None
+    distance_m: Optional[float] = None
+    duration_s: Optional[int] = None
+
+
+def _clean(doc: dict) -> dict:
+    doc.pop("_id", None)
+    return doc
+
+
+# ---------- Routes ----------
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Sleda API", "status": "ok"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
+@api_router.post("/trips", response_model=Trip)
+async def create_trip(payload: TripCreate):
+    trip = Trip(name=payload.name)
+    await db.trips.insert_one(trip.model_dump())
+    return trip
 
-# Include the router in the main app
+
+@api_router.get("/trips", response_model=List[Trip])
+async def list_trips():
+    cursor = db.trips.find({}, {"_id": 0}).sort("started_at", -1)
+    docs = await cursor.to_list(length=500)
+    return [Trip(**d) for d in docs]
+
+
+@api_router.get("/trips/{trip_id}", response_model=Trip)
+async def get_trip(trip_id: str):
+    doc = await db.trips.find_one({"id": trip_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return Trip(**doc)
+
+
+@api_router.patch("/trips/{trip_id}", response_model=Trip)
+async def update_trip(trip_id: str, payload: TripUpdate):
+    update = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if v is not None}
+    if not update:
+        doc = await db.trips.find_one({"id": trip_id}, {"_id": 0})
+        if not doc:
+            raise HTTPException(status_code=404, detail="Trip not found")
+        return Trip(**doc)
+    result = await db.trips.find_one_and_update(
+        {"id": trip_id},
+        {"$set": update},
+        return_document=True,
+        projection={"_id": 0},
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return Trip(**result)
+
+
+@api_router.delete("/trips/{trip_id}")
+async def delete_trip(trip_id: str):
+    res = await db.trips.delete_one({"id": trip_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return {"deleted": True}
+
+
+@api_router.post("/trips/{trip_id}/markers", response_model=Marker)
+async def add_marker(trip_id: str, marker: Marker):
+    trip = await db.trips.find_one({"id": trip_id}, {"_id": 0})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    await db.trips.update_one(
+        {"id": trip_id},
+        {"$push": {"markers": marker.model_dump()}},
+    )
+    return marker
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -63,12 +147,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
