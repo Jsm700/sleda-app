@@ -16,6 +16,7 @@ import MapCanvas from "@/src/components/MapCanvas";
 import type { MapMarker, RoutePoint, MarkerType, MapCanvasHandle } from "@/src/components/MapCanvas.types";
 import { colors, spacing, radius } from "@/src/theme/colors";
 import { useTranslation, type TranslationKey } from "@/src/i18n";
+import { api } from "@/src/api/client";
 
 const MARKER_BUTTONS: {
   type: MarkerType;
@@ -69,6 +70,11 @@ export default function HomeScreen() {
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [distance, setDistance] = useState(0);
   const [elapsed, setElapsed] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const tripIdRef = useRef<string | null>(null);
+  const routeRef = useRef<RoutePoint[]>([]);
+  const markersRef = useRef<MapMarker[]>([]);
+  const distanceRef = useRef(0);
 
   const safeHaptic = useCallback((fn: () => Promise<void> | void) => {
     try {
@@ -142,7 +148,19 @@ export default function HomeScreen() {
       setMarkers([]);
       setDistance(0);
       setElapsed(0);
+      routeRef.current = [];
+      markersRef.current = [];
+      distanceRef.current = 0;
+      tripIdRef.current = null;
       setIsTracking(true);
+
+      // Create trip on backend immediately so the trip id is known.
+      try {
+        const trip = await api.createTrip();
+        tripIdRef.current = trip.id;
+      } catch (e) {
+        console.warn("createTrip failed", e);
+      }
 
       watchRef.current = await Location.watchPositionAsync(
         {
@@ -162,9 +180,12 @@ export default function HomeScreen() {
               const last = prev[prev.length - 1];
               const d = distanceM(last, point);
               if (d < 2) return prev;
-              setDistance((dist) => dist + d);
+              distanceRef.current = distanceRef.current + d;
+              setDistance(distanceRef.current);
             }
-            return [...prev, point];
+            const next = [...prev, point];
+            routeRef.current = next;
+            return next;
           });
         },
       );
@@ -173,9 +194,55 @@ export default function HomeScreen() {
       watchRef.current?.remove();
       watchRef.current = null;
       setIsTracking(false);
-      Alert.alert(t("tripSavedTitle"), t("tripSavedBody"));
+
+      // Persist final route/markers/stats to backend.
+      const id = tripIdRef.current;
+      const finalDurationS = startTimeRef.current
+        ? Math.floor((Date.now() - startTimeRef.current) / 1000)
+        : elapsed;
+      const finalRoute = routeRef.current.map((p) => ({
+        latitude: p.latitude,
+        longitude: p.longitude,
+        timestamp: new Date(p.timestamp).toISOString(),
+      }));
+      const finalMarkers = markersRef.current.map((m) => ({
+        id: m.id,
+        type: m.type,
+        latitude: m.latitude,
+        longitude: m.longitude,
+        timestamp: new Date(m.timestamp).toISOString(),
+      }));
+
+      setSaving(true);
+      try {
+        if (id) {
+          await api.updateTrip(id, {
+            ended_at: new Date().toISOString(),
+            route: finalRoute,
+            markers: finalMarkers,
+            distance_m: distanceRef.current,
+            duration_s: finalDurationS,
+          });
+        } else {
+          // Fallback: create now if creation at START failed earlier.
+          const created = await api.createTrip();
+          await api.updateTrip(created.id, {
+            ended_at: new Date().toISOString(),
+            route: finalRoute,
+            markers: finalMarkers,
+            distance_m: distanceRef.current,
+            duration_s: finalDurationS,
+          });
+        }
+        Alert.alert(t("tripSavedTitle"), t("tripSavedBody"));
+      } catch (e) {
+        console.warn("save trip failed", e);
+        Alert.alert(t("saveError"), String(e));
+      } finally {
+        setSaving(false);
+      }
     }
-  }, [isTracking, permissionStatus, initLocation, t, safeHaptic]);
+  }, [isTracking, permissionStatus, initLocation, t, safeHaptic, elapsed]);
 
   const handleDropMarker = useCallback(
     (type: MarkerType) => {
@@ -191,7 +258,11 @@ export default function HomeScreen() {
         longitude: currentLocation.longitude,
         timestamp: Date.now(),
       };
-      setMarkers((prev) => [...prev, m]);
+      setMarkers((prev) => {
+        const next = [...prev, m];
+        markersRef.current = next;
+        return next;
+      });
     },
     [currentLocation, t, safeHaptic],
   );

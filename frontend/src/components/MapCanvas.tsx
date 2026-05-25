@@ -1,8 +1,17 @@
 import React from "react";
 import { Platform, StyleSheet } from "react-native";
+import * as FileSystem from "expo-file-system/legacy";
 import MapView, { Polyline, Marker, UrlTile, PROVIDER_DEFAULT, Region } from "react-native-maps";
 
 import type { MapCanvasProps } from "./MapCanvas.types";
+
+// On-device cache directory for OSM tiles - enables offline browsing of
+// previously visited map regions. Android caches tiles; iOS ignores the
+// path silently (react-native-maps limitation).
+const TILE_CACHE_PATH =
+  Platform.OS !== "web" && FileSystem.cacheDirectory
+    ? `${FileSystem.cacheDirectory}osm-tiles`
+    : undefined;
 
 const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
   { initialRegion, route, markers, brandColor, markerColorFor, markerLabelFor },
@@ -31,6 +40,8 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
         urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         maximumZ={19}
         flipY={false}
+        tileCachePath={TILE_CACHE_PATH}
+        tileCacheMaxAge={60 * 60 * 24 * 30}
       />
 
       {route.length > 1 && (

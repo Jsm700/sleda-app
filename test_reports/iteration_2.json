@@ -1,0 +1,48 @@
+{
+  "summary": "Iteration 2 backend-only testing for Sleda (Следа). Added /app/backend/tests/test_trip_lifecycle.py with 7 new tests covering full lifecycle (POST -> PATCH with route+markers+stats -> GET), PATCH with all 5 marker types (car/fish/mushroom/hazard/water), large route PATCH (150 points), invalid marker type rejection via PATCH, sorted list (started_at desc), and DELETE -> GET 404. Combined with the existing 14 tests, all 21/21 backend tests pass against EXPO_PUBLIC_BACKEND_URL=https://trace-fisher.preview.emergentagent.com. PATCH endpoint correctly accepts all fields (name, ended_at, route, markers, distance_m, duration_s), persists them, and excludes _id from responses.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "PATCH /api/trips/{id}",
+        "issue": "Implementation filters out None values (`v is not None`) in addition to using exclude_unset. This means clients cannot explicitly null-out a field (e.g., reset ended_at to null). Not in scope of iteration 2; harmless for current flows."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_trips.py",
+    "/app/backend/tests/test_trip_lifecycle.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py (160 lines) is clean: /api prefix, UUID ids via Field(default_factory), _id excluded via projection on all reads and on find_one_and_update, Literal-based MarkerType => 422 on invalid type.",
+    "PATCH uses find_one_and_update with return_document=True (returns updated doc) and projection={'_id': 0} -- correctly omits _id from response. Verified by tests.",
+    "Frontend /app/frontend/src/api/client.ts types (ApiTrip/ApiMarker/ApiRoutePoint) match backend Pydantic models exactly. updateTrip sends Partial<ApiTrip>, compatible with TripUpdate.",
+    "Minor: PATCH cannot explicitly set fields to null due to `v is not None` filter. Acceptable for current iteration."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_trip_lifecycle.py (new)"
+  ],
+  "success_rate": {"backend": "100% (21/21)", "frontend": "not-tested"},
+  "seed_data_creation": "All test trips prefixed TEST_ and cleaned up via test_zz_cleanup / test_zz_cleanup_iter2 fixtures (DELETE).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend stable. Two pytest files in /app/backend/tests/: test_trips.py (general CRUD) and test_trip_lifecycle.py (iteration 2: full lifecycle + large route + PATCH-based markers). Both use EXPO_PUBLIC_BACKEND_URL. Frontend (Expo web) was NOT tested per request (testing_type=backend only). Note expo.err.log shows 'Premature close' warnings (tunnel reconnects) but bundling succeeds.",
+  "rca_of_issue": "N/A - no issues found",
+  "tests_executed_iter2": {
+    "TestTripFullLifecycle::test_lifecycle_post_patch_get": "PASS - POST creates empty trip, PATCH writes 25-pt route + 3 markers (car/fish/mushroom) + ended_at + distance_m=532.7 + duration_s=125; GET verifies persistence; no _id leak.",
+    "TestPatchAllMarkerTypes::test_patch_persists_all_5_marker_types": "PASS - PATCH with all 5 types (car/fish/mushroom/hazard/water) persisted; auto-generated UUIDs for each marker; verified via GET.",
+    "TestPatchAllMarkerTypes::test_patch_invalid_marker_type_rejected": "PASS - PATCH with type='bogus' returns 422.",
+    "TestLargeRoutePatch::test_patch_large_route_150_points": "PASS - 150-point route + stats PATCHed and read back intact; first/last lat preserved; distance_m=1500.0, duration_s=300.",
+    "TestListSorted::test_list_sorted_desc_includes_created": "PASS - GET /api/trips sorted by started_at desc, no _id leak, includes all created ids.",
+    "TestDeleteThen404::test_delete_then_get_404": "PASS - DELETE returns {deleted:true}; subsequent GET=404; subsequent DELETE=404.",
+    "test_zz_cleanup_iter2": "PASS - teardown cleanup."
+  }
+}
