@@ -4,6 +4,10 @@ import { useEffect } from "react";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 
+// Register the background location task at module import time (before any
+// screen mounts) - required by expo-task-manager.
+import "@/src/tracking/locationTask";
+
 // Keep the native splash visible from cold start until icon fonts register.
 // Required because @expo/vector-icons' componentDidMount fallback fires
 // Font.loadAsync against a broken vendor path if any <Icon> mounts before

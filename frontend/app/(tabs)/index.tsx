@@ -6,6 +6,8 @@ import {
   Pressable,
   ActivityIndicator,
   Alert,
+  AppState,
+  Platform,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -13,10 +15,23 @@ import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MapCanvas from "@/src/components/MapCanvas";
-import type { MapMarker, RoutePoint, MarkerType, MapCanvasHandle } from "@/src/components/MapCanvas.types";
+import type {
+  MapMarker,
+  RoutePoint,
+  MarkerType,
+  MapCanvasHandle,
+} from "@/src/components/MapCanvas.types";
 import { colors, spacing, radius } from "@/src/theme/colors";
 import { useTranslation, type TranslationKey } from "@/src/i18n";
 import { api } from "@/src/api/client";
+import {
+  LOCATION_TASK_NAME,
+  clearStoredRoute,
+  isTrackingActive,
+  readActiveTrip,
+  readStoredRoute,
+  setActiveTrip,
+} from "@/src/tracking/locationTask";
 
 const MARKER_BUTTONS: {
   type: MarkerType;
@@ -31,7 +46,7 @@ const MARKER_BUTTONS: {
   { type: "water", icon: "water", color: colors.markerWater, labelKey: "water" },
 ];
 
-function distanceM(a: RoutePoint, b: RoutePoint): number {
+function distanceM(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }): number {
   const R = 6371000;
   const toRad = (d: number) => (d * Math.PI) / 180;
   const dLat = toRad(b.latitude - a.latitude);
@@ -42,12 +57,19 @@ function distanceM(a: RoutePoint, b: RoutePoint): number {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
+function computeTotalDistance(points: { latitude: number; longitude: number }[]): number {
+  let d = 0;
+  for (let i = 1; i < points.length; i++) d += distanceM(points[i - 1], points[i]);
+  return d;
+}
+
 function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  const s = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
 function formatDistance(m: number): string {
@@ -59,9 +81,11 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const mapRef = useRef<MapCanvasHandle>(null);
-  const watchRef = useRef<Location.LocationSubscription | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tripIdRef = useRef<string | null>(null);
+  const markersRef = useRef<MapMarker[]>([]);
 
   const [permissionStatus, setPermissionStatus] = useState<Location.PermissionStatus | null>(null);
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObjectCoords | null>(null);
@@ -70,11 +94,7 @@ export default function HomeScreen() {
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [distance, setDistance] = useState(0);
   const [elapsed, setElapsed] = useState(0);
-  const [saving, setSaving] = useState(false);
-  const tripIdRef = useRef<string | null>(null);
-  const routeRef = useRef<RoutePoint[]>([]);
-  const markersRef = useRef<MapMarker[]>([]);
-  const distanceRef = useRef(0);
+  const [, setSaving] = useState(false);
 
   const safeHaptic = useCallback((fn: () => Promise<void> | void) => {
     try {
@@ -111,17 +131,63 @@ export default function HomeScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    initLocation();
-    return () => {
-      watchRef.current?.remove();
-      if (tickRef.current) clearInterval(tickRef.current);
-    };
-  }, [initLocation]);
+  // ----- Storage polling: pull background route points into UI -----
+  const refreshFromStorage = useCallback(async () => {
+    const points = await readStoredRoute();
+    if (points.length === 0) return;
+    setRoute(points);
+    setDistance(computeTotalDistance(points));
+    const last = points[points.length - 1];
+    setCurrentLocation((prev) => prev ?? ({ latitude: last.latitude, longitude: last.longitude } as Location.LocationObjectCoords));
+  }, []);
+
+  const startPolling = useCallback(() => {
+    if (pollRef.current) return;
+    pollRef.current = setInterval(refreshFromStorage, 2000);
+  }, [refreshFromStorage]);
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  // ----- Recover an in-progress trip if user re-opens the app -----
+  const recoverActiveTrip = useCallback(async () => {
+    try {
+      const active = await isTrackingActive();
+      if (!active) return;
+      const { id, startedAt } = await readActiveTrip();
+      if (!id || !startedAt) return;
+      tripIdRef.current = id;
+      startTimeRef.current = startedAt;
+      setIsTracking(true);
+      setElapsed(Math.floor((Date.now() - startedAt) / 1000));
+      await refreshFromStorage();
+      startPolling();
+    } catch (e) {
+      console.warn("recoverActiveTrip failed", e);
+    }
+  }, [refreshFromStorage, startPolling]);
 
   useEffect(() => {
+    initLocation();
+    recoverActiveTrip();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") refreshFromStorage();
+    });
+    return () => {
+      sub.remove();
+      stopPolling();
+      if (tickRef.current) clearInterval(tickRef.current);
+    };
+  }, [initLocation, recoverActiveTrip, refreshFromStorage, stopPolling]);
+
+  // ----- Timer -----
+  useEffect(() => {
     if (isTracking) {
-      startTimeRef.current = Date.now();
+      if (!startTimeRef.current) startTimeRef.current = Date.now();
       tickRef.current = setInterval(() => {
         if (startTimeRef.current) {
           setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
@@ -136,6 +202,7 @@ export default function HomeScreen() {
     };
   }, [isTracking]);
 
+  // ----- START / STOP -----
   const handleStartStop = useCallback(async () => {
     if (permissionStatus !== "granted") {
       await initLocation();
@@ -143,64 +210,85 @@ export default function HomeScreen() {
     }
 
     if (!isTracking) {
+      // Ask for background permission. Reduced capability if denied: we
+      // still track but only while screen is on (foreground service).
+      let canBackground = true;
+      try {
+        const bg = await Location.requestBackgroundPermissionsAsync();
+        canBackground = bg.status === "granted";
+      } catch {
+        canBackground = false;
+      }
+
       safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy));
+      await clearStoredRoute();
       setRoute([]);
       setMarkers([]);
+      markersRef.current = [];
       setDistance(0);
       setElapsed(0);
-      routeRef.current = [];
-      markersRef.current = [];
-      distanceRef.current = 0;
-      tripIdRef.current = null;
+      startTimeRef.current = Date.now();
       setIsTracking(true);
 
-      // Create trip on backend immediately so the trip id is known.
+      // Create trip in backend - get id for later PATCH.
       try {
         const trip = await api.createTrip();
         tripIdRef.current = trip.id;
+        await setActiveTrip(trip.id, startTimeRef.current);
       } catch (e) {
         console.warn("createTrip failed", e);
       }
 
-      watchRef.current = await Location.watchPositionAsync(
-        {
+      // Start the foreground/background location task.
+      try {
+        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
           accuracy: Location.Accuracy.High,
           timeInterval: 2000,
           distanceInterval: 3,
-        },
-        (loc) => {
-          const point: RoutePoint = {
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-            timestamp: loc.timestamp,
-          };
-          setCurrentLocation(loc.coords);
-          setRoute((prev) => {
-            if (prev.length > 0) {
-              const last = prev[prev.length - 1];
-              const d = distanceM(last, point);
-              if (d < 2) return prev;
-              distanceRef.current = distanceRef.current + d;
-              setDistance(distanceRef.current);
-            }
-            const next = [...prev, point];
-            routeRef.current = next;
-            return next;
-          });
-        },
-      );
+          showsBackgroundLocationIndicator: true,
+          pausesUpdatesAutomatically: false,
+          foregroundService:
+            Platform.OS === "android"
+              ? {
+                  notificationTitle: "Следа",
+                  notificationBody: "Записва маршрут",
+                  notificationColor: colors.brand,
+                }
+              : undefined,
+        });
+      } catch (e) {
+        console.warn("startLocationUpdatesAsync failed, falling back to foreground", e);
+        Alert.alert(t("saveError"), String(e));
+        setIsTracking(false);
+        return;
+      }
+
+      if (!canBackground) {
+        Alert.alert(
+          t("permissionRequired"),
+          t("permissionMessage"),
+        );
+      }
+
+      startPolling();
     } else {
       safeHaptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
-      watchRef.current?.remove();
-      watchRef.current = null;
-      setIsTracking(false);
+      stopPolling();
 
-      // Persist final route/markers/stats to backend.
-      const id = tripIdRef.current;
+      try {
+        const running = await isTrackingActive();
+        if (running) await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+      } catch (e) {
+        console.warn("stopLocationUpdatesAsync failed", e);
+      }
+
+      // Final read of accumulated points.
+      const finalPoints = await readStoredRoute();
+      const finalDistance = computeTotalDistance(finalPoints);
       const finalDurationS = startTimeRef.current
         ? Math.floor((Date.now() - startTimeRef.current) / 1000)
         : elapsed;
-      const finalRoute = routeRef.current.map((p) => ({
+      const finalRoute = finalPoints.map((p) => ({
         latitude: p.latitude,
         longitude: p.longitude,
         timestamp: new Date(p.timestamp).toISOString(),
@@ -213,36 +301,32 @@ export default function HomeScreen() {
         timestamp: new Date(m.timestamp).toISOString(),
       }));
 
+      setIsTracking(false);
+      setRoute(finalPoints);
+      setDistance(finalDistance);
+
       setSaving(true);
       try {
-        if (id) {
-          await api.updateTrip(id, {
-            ended_at: new Date().toISOString(),
-            route: finalRoute,
-            markers: finalMarkers,
-            distance_m: distanceRef.current,
-            duration_s: finalDurationS,
-          });
-        } else {
-          // Fallback: create now if creation at START failed earlier.
-          const created = await api.createTrip();
-          await api.updateTrip(created.id, {
-            ended_at: new Date().toISOString(),
-            route: finalRoute,
-            markers: finalMarkers,
-            distance_m: distanceRef.current,
-            duration_s: finalDurationS,
-          });
-        }
+        const id = tripIdRef.current ?? (await api.createTrip()).id;
+        await api.updateTrip(id, {
+          ended_at: new Date().toISOString(),
+          route: finalRoute,
+          markers: finalMarkers,
+          distance_m: finalDistance,
+          duration_s: finalDurationS,
+        });
         Alert.alert(t("tripSavedTitle"), t("tripSavedBody"));
       } catch (e) {
         console.warn("save trip failed", e);
         Alert.alert(t("saveError"), String(e));
       } finally {
         setSaving(false);
+        await clearStoredRoute();
+        tripIdRef.current = null;
+        startTimeRef.current = null;
       }
     }
-  }, [isTracking, permissionStatus, initLocation, t, safeHaptic, elapsed]);
+  }, [isTracking, permissionStatus, initLocation, t, safeHaptic, elapsed, startPolling, stopPolling]);
 
   const handleDropMarker = useCallback(
     (type: MarkerType) => {
@@ -402,15 +486,8 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  mapWrap: {
-    flex: 1,
-    backgroundColor: colors.surfaceTertiary,
-    overflow: "hidden",
-  },
+  root: { flex: 1, backgroundColor: colors.surface },
+  mapWrap: { flex: 1, backgroundColor: colors.surfaceTertiary, overflow: "hidden" },
   topOverlay: {
     position: "absolute",
     top: 0,
@@ -418,11 +495,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: spacing.md,
   },
-  statusRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
+  statusRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
   statusCard: {
     flex: 1,
     backgroundColor: "rgba(18,18,18,0.85)",
@@ -440,12 +513,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
-  statusValue: {
-    color: colors.onSurface,
-    fontSize: 18,
-    fontWeight: "800",
-    marginTop: 2,
-  },
+  statusValue: { color: colors.onSurface, fontSize: 18, fontWeight: "800", marginTop: 2 },
   recordingBadge: {
     alignSelf: "center",
     marginTop: spacing.sm,
@@ -457,18 +525,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     gap: 6,
   },
-  recordingDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#fff",
-  },
-  recordingText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.6,
-  },
+  recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#fff" },
+  recordingText: { color: "#fff", fontSize: 12, fontWeight: "800", letterSpacing: 0.6 },
   locatingOverlay: {
     position: "absolute",
     bottom: spacing.lg,
@@ -480,11 +538,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.xs,
   },
-  locatingText: {
-    color: colors.onSurface,
-    fontSize: 13,
-    fontWeight: "600",
-  },
+  locatingText: { color: colors.onSurface, fontSize: 13, fontWeight: "600" },
   permissionOverlay: {
     position: "absolute",
     top: 0,
@@ -497,17 +551,8 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.md,
   },
-  permissionTitle: {
-    color: colors.onSurface,
-    fontSize: 20,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-  permissionBody: {
-    color: colors.onSurfaceTertiary,
-    fontSize: 14,
-    textAlign: "center",
-  },
+  permissionTitle: { color: colors.onSurface, fontSize: 20, fontWeight: "800", textAlign: "center" },
+  permissionBody: { color: colors.onSurfaceTertiary, fontSize: 14, textAlign: "center" },
   permissionBtn: {
     backgroundColor: colors.brand,
     paddingVertical: spacing.md,
@@ -515,12 +560,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     marginTop: spacing.sm,
   },
-  permissionBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 0.6,
-  },
+  permissionBtnText: { color: "#fff", fontSize: 16, fontWeight: "800", letterSpacing: 0.6 },
   controls: {
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.md,
@@ -529,11 +569,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     gap: spacing.md,
   },
-  markerGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: spacing.xs,
-  },
+  markerGrid: { flexDirection: "row", justifyContent: "space-between", gap: spacing.xs },
   markerBtn: {
     flex: 1,
     minHeight: 76,
@@ -546,17 +582,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: 4,
   },
-  markerBtnPressed: {
-    backgroundColor: colors.surfaceTertiary,
-    transform: [{ scale: 0.96 }],
-  },
-  markerLabel: {
-    color: colors.onSurface,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-    textAlign: "center",
-  },
+  markerBtnPressed: { backgroundColor: colors.surfaceTertiary, transform: [{ scale: 0.96 }] },
+  markerLabel: { color: colors.onSurface, fontSize: 10, fontWeight: "700", letterSpacing: 0.3, textAlign: "center" },
   startStopBtn: {
     minHeight: 72,
     borderRadius: radius.md,
@@ -565,13 +592,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.sm,
   },
-  startStopPressed: {
-    opacity: 0.85,
-  },
-  startStopText: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
+  startStopPressed: { opacity: 0.85 },
+  startStopText: { color: "#fff", fontSize: 24, fontWeight: "900", letterSpacing: 2 },
 });

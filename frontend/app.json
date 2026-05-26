@@ -12,7 +12,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Track your fishing and foraging routes",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Track your routes in background",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Continue tracking your route while the app is in background",
+        "NSLocationAlwaysUsageDescription": "Continue tracking your route while the app is in background",
         "UIBackgroundModes": ["location"]
       }
     },
@@ -24,7 +25,11 @@
       "edgeToEdgeEnabled": true,
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "WAKE_LOCK"
       ]
     },
     "web": {
@@ -37,7 +42,11 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Track your fishing and foraging routes"
+          "locationWhenInUsePermission": "Track your fishing and foraging routes",
+          "locationAlwaysAndWhenInUsePermission": "Continue tracking your route while the app is in background",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true
         }
       ],
       [
