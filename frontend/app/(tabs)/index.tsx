@@ -49,7 +49,6 @@ const MARKER_BUTTONS: {
   { type: "fish", icon: "fish", color: colors.markerFish, labelKey: "fish" },
   { type: "mushroom", icon: "mushroom", color: colors.markerMushroom, labelKey: "mushroom" },
   { type: "hazard", icon: "alert", color: colors.markerHazard, labelKey: "hazard" },
-  { type: "poi", icon: "map-marker", color: colors.brand, labelKey: "poi" },
   { type: "note", icon: "note-edit-outline", color: colors.info, labelKey: "note" },
 ];
 

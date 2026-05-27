@@ -56,7 +56,6 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
           title={markerLabelFor(m.type)}
           description={m.note ?? undefined}
           anchor={{ x: 0.5, y: 0.5 }}
-          tracksViewChanges={false}
         >
           <MarkerPin type={m.type} />
         </Marker>
