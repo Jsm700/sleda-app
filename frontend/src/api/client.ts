@@ -3,7 +3,7 @@
 
 const BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-export type MarkerType = "car" | "fish" | "mushroom" | "hazard" | "water";
+export type MarkerType = "car" | "fish" | "mushroom" | "hazard" | "water" | "note";
 
 export type ApiMarker = {
   id?: string;
@@ -11,6 +11,7 @@ export type ApiMarker = {
   latitude: number;
   longitude: number;
   note?: string | null;
+  photo?: string | null;
   timestamp?: string;
 };
 
@@ -59,4 +60,23 @@ export const api = {
     }),
   deleteTrip: (id: string) =>
     request<{ deleted: boolean }>(`/trips/${id}`, { method: "DELETE" }),
+  getStats: () =>
+    request<{
+      total_trips: number;
+      total_distance_m: number;
+      total_duration_s: number;
+      markers_by_type: Record<MarkerType, number>;
+    }>("/stats"),
+  listPhotos: () =>
+    request<{
+      trip_id: string;
+      trip_started_at: string;
+      marker_id: string;
+      type: MarkerType;
+      note: string | null;
+      photo: string;
+      timestamp: string;
+      latitude: number;
+      longitude: number;
+    }[]>("/photos"),
 };

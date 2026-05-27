@@ -10,6 +10,7 @@ import { useTranslation } from "@/src/i18n";
 import { colors, spacing, radius } from "@/src/theme/colors";
 import { api, type ApiTrip } from "@/src/api/client";
 import { formatDateTime, formatDistance, formatDuration } from "@/src/utils/format";
+import { shareTripAsGpx } from "@/src/utils/gpx";
 
 const MARKER_COLORS: Record<MarkerType, string> = {
   car: colors.markerCar,
@@ -62,6 +63,15 @@ export default function TripDetailScreen() {
     load();
   }, [load]);
 
+  const handleExportGpx = useCallback(async () => {
+    if (!trip) return;
+    try {
+      await shareTripAsGpx(trip);
+    } catch (e) {
+      Alert.alert(t("saveError"), String(e));
+    }
+  }, [trip, t]);
+
   const handleDelete = useCallback(() => {
     if (!id) return;
     Alert.alert(t("delete"), t("deleteConfirm"), [
@@ -109,6 +119,8 @@ export default function TripDetailScreen() {
     latitude: m.latitude,
     longitude: m.longitude,
     timestamp: 0,
+    note: m.note ?? null,
+    photo: m.photo ?? null,
   }));
 
   return (
@@ -125,13 +137,22 @@ export default function TripDetailScreen() {
             <MaterialCommunityIcons name="arrow-left" size={24} color={colors.onSurface} />
           </Pressable>
           <Text style={styles.title}>{t("tripDetail")}</Text>
-          <Pressable
-            onPress={handleDelete}
-            style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
-            testID="delete-btn"
-          >
-            <MaterialCommunityIcons name="trash-can-outline" size={22} color={colors.error} />
-          </Pressable>
+          <View style={{ flexDirection: "row" }}>
+            <Pressable
+              onPress={handleExportGpx}
+              style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+              testID="export-gpx-btn"
+            >
+              <MaterialCommunityIcons name="export-variant" size={22} color={colors.brand} />
+            </Pressable>
+            <Pressable
+              onPress={handleDelete}
+              style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+              testID="delete-btn"
+            >
+              <MaterialCommunityIcons name="trash-can-outline" size={22} color={colors.error} />
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
 

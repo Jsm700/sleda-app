@@ -2,6 +2,7 @@ import React from "react";
 import { Platform, StyleSheet } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import MapView, { Polyline, Marker, UrlTile, PROVIDER_DEFAULT, Region } from "react-native-maps";
+import MarkerPin from "./MarkerPin";
 
 import type { MapCanvasProps } from "./MapCanvas.types";
 
@@ -14,7 +15,7 @@ const TILE_CACHE_PATH =
     : undefined;
 
 const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
-  { initialRegion, route, markers, brandColor, markerColorFor, markerLabelFor },
+  { initialRegion, route, markers, brandColor, markerLabelFor },
   ref,
 ) {
   const reg: Region = {
@@ -52,9 +53,13 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
         <Marker
           key={m.id}
           coordinate={{ latitude: m.latitude, longitude: m.longitude }}
-          pinColor={markerColorFor(m.type)}
           title={markerLabelFor(m.type)}
-        />
+          description={m.note ?? undefined}
+          anchor={{ x: 0.5, y: 0.5 }}
+          tracksViewChanges={false}
+        >
+          <MarkerPin type={m.type} />
+        </Marker>
       ))}
     </MapView>
   );

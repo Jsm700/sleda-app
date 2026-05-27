@@ -14,6 +14,8 @@
         "NSLocationWhenInUseUsageDescription": "Track your fishing and foraging routes",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Continue tracking your route while the app is in background",
         "NSLocationAlwaysUsageDescription": "Continue tracking your route while the app is in background",
+        "NSCameraUsageDescription": "Attach photos to your route notes",
+        "NSPhotoLibraryUsageDescription": "Pick existing photos to attach to notes",
         "UIBackgroundModes": ["location"]
       }
     },
@@ -29,7 +31,9 @@
         "ACCESS_BACKGROUND_LOCATION",
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION",
-        "WAKE_LOCK"
+        "WAKE_LOCK",
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
       ]
     },
     "web": {
@@ -47,6 +51,13 @@
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true,
           "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pick existing photos to attach to notes",
+          "cameraPermission": "Capture photos to attach to your route notes"
         }
       ],
       [

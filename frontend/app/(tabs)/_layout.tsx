@@ -20,11 +20,7 @@ export default function TabsLayout() {
         },
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.onSurfaceTertiary,
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "700",
-          letterSpacing: 0.4,
-        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "700", letterSpacing: 0.4 },
       }}
     >
       <Tabs.Screen
@@ -42,6 +38,24 @@ export default function TabsLayout() {
           title: t("archive"),
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="history" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="stats"
+        options={{
+          title: t("stats"),
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="chart-bar" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="gallery"
+        options={{
+          title: t("gallery"),
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="image-multiple" size={size} color={color} />
           ),
         }}
       />

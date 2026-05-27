@@ -8,11 +8,17 @@ import {
   Alert,
   AppState,
   Platform,
+  Modal,
+  TextInput,
+  Image,
+  KeyboardAvoidingView,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MapCanvas from "@/src/components/MapCanvas";
 import type {
@@ -44,6 +50,7 @@ const MARKER_BUTTONS: {
   { type: "mushroom", icon: "mushroom", color: colors.markerMushroom, labelKey: "mushroom" },
   { type: "hazard", icon: "alert", color: colors.markerHazard, labelKey: "hazard" },
   { type: "water", icon: "water", color: colors.markerWater, labelKey: "water" },
+  { type: "note", icon: "note-edit-outline", color: colors.info, labelKey: "note" },
 ];
 
 function distanceM(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }): number {
@@ -298,6 +305,8 @@ export default function HomeScreen() {
         type: m.type,
         latitude: m.latitude,
         longitude: m.longitude,
+        note: m.note ?? null,
+        photo: m.photo ?? null,
         timestamp: new Date(m.timestamp).toISOString(),
       }));
 
@@ -334,6 +343,17 @@ export default function HomeScreen() {
         Alert.alert(t("locating"));
         return;
       }
+      if (type === "note") {
+        // Open the note modal - photo + text will be captured before adding.
+        setNoteCoords({
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+        });
+        setNoteText("");
+        setNotePhoto(null);
+        setNoteModalOpen(true);
+        return;
+      }
       safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
       const m: MapMarker = {
         id: `${Date.now()}-${type}`,
@@ -350,6 +370,60 @@ export default function HomeScreen() {
     },
     [currentLocation, t, safeHaptic],
   );
+
+  const captureNotePhoto = useCallback(async (fromCamera: boolean) => {
+    try {
+      if (fromCamera) {
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!perm.granted) return;
+        const res = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          quality: 0.5,
+          base64: true,
+          allowsEditing: false,
+        });
+        if (!res.canceled && res.assets[0]?.base64) setNotePhoto(res.assets[0].base64);
+      } else {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) return;
+        const res = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          quality: 0.5,
+          base64: true,
+          allowsEditing: false,
+        });
+        if (!res.canceled && res.assets[0]?.base64) setNotePhoto(res.assets[0].base64);
+      }
+    } catch (e) {
+      console.warn("image picker failed", e);
+    }
+  }, []);
+
+  const saveNoteMarker = useCallback(() => {
+    if (!noteCoords) {
+      setNoteModalOpen(false);
+      return;
+    }
+    safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
+    const m: MapMarker = {
+      id: `${Date.now()}-note`,
+      type: "note",
+      latitude: noteCoords.latitude,
+      longitude: noteCoords.longitude,
+      timestamp: Date.now(),
+      note: noteText.trim() || null,
+      photo: notePhoto,
+    };
+    setMarkers((prev) => {
+      const next = [...prev, m];
+      markersRef.current = next;
+      return next;
+    });
+    setNoteModalOpen(false);
+    setNoteText("");
+    setNotePhoto(null);
+    setNoteCoords(null);
+  }, [noteCoords, noteText, notePhoto, safeHaptic]);
 
   const markerColorFor = useCallback(
     (type: MarkerType) =>
@@ -481,6 +555,86 @@ export default function HomeScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {/* Note modal: title + optional photo */}
+      <Modal
+        visible={noteModalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setNoteModalOpen(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalRoot}
+        >
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t("addNote")}</Text>
+              <Pressable
+                onPress={() => setNoteModalOpen(false)}
+                style={styles.modalClose}
+                testID="note-close-btn"
+              >
+                <MaterialCommunityIcons name="close" size={24} color={colors.onSurface} />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={{ gap: spacing.md }}>
+              <TextInput
+                value={noteText}
+                onChangeText={setNoteText}
+                placeholder={t("noteHint")}
+                placeholderTextColor={colors.onSurfaceTertiary}
+                style={styles.noteInput}
+                multiline
+                numberOfLines={3}
+                testID="note-text-input"
+              />
+              {notePhoto ? (
+                <View style={styles.previewWrap}>
+                  <Image
+                    source={{ uri: `data:image/jpeg;base64,${notePhoto}` }}
+                    style={styles.preview}
+                  />
+                  <Pressable
+                    onPress={() => setNotePhoto(null)}
+                    style={styles.previewRemove}
+                    testID="note-photo-remove"
+                  >
+                    <MaterialCommunityIcons name="close" size={18} color="#fff" />
+                  </Pressable>
+                </View>
+              ) : (
+                <View style={styles.photoRow}>
+                  <Pressable
+                    style={styles.photoBtn}
+                    onPress={() => captureNotePhoto(true)}
+                    testID="note-camera-btn"
+                  >
+                    <MaterialCommunityIcons name="camera" size={22} color={colors.onSurface} />
+                    <Text style={styles.photoBtnText}>{t("takePhoto")}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.photoBtn}
+                    onPress={() => captureNotePhoto(false)}
+                    testID="note-gallery-btn"
+                  >
+                    <MaterialCommunityIcons name="image" size={22} color={colors.onSurface} />
+                    <Text style={styles.photoBtnText}>{t("pickPhoto")}</Text>
+                  </Pressable>
+                </View>
+              )}
+              <Pressable
+                style={styles.modalSaveBtn}
+                onPress={saveNoteMarker}
+                testID="note-save-btn"
+              >
+                <MaterialCommunityIcons name="check-bold" size={22} color="#fff" />
+                <Text style={styles.modalSaveText}>{t("save")}</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -594,4 +748,64 @@ const styles = StyleSheet.create({
   },
   startStopPressed: { opacity: 0.85 },
   startStopText: { color: "#fff", fontSize: 24, fontWeight: "900", letterSpacing: 2 },
+  modalRoot: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
+  modalCard: {
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    gap: spacing.md,
+    maxHeight: "85%",
+  },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  modalTitle: { color: colors.onSurface, fontSize: 20, fontWeight: "900" },
+  modalClose: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  noteInput: {
+    backgroundColor: colors.surfaceSecondary,
+    color: colors.onSurface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    minHeight: 80,
+    textAlignVertical: "top",
+    fontSize: 16,
+  },
+  photoRow: { flexDirection: "row", gap: spacing.sm },
+  photoBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  photoBtnText: { color: colors.onSurface, fontWeight: "700", fontSize: 14 },
+  previewWrap: { position: "relative", alignItems: "center" },
+  preview: { width: "100%", height: 240, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary },
+  previewRemove: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalSaveBtn: {
+    backgroundColor: colors.brand,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+  },
+  modalSaveText: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 0.5 },
 });

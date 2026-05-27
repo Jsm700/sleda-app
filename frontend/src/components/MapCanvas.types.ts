@@ -1,5 +1,5 @@
 // Shared types between native and web map implementations.
-export type MarkerType = "car" | "fish" | "mushroom" | "hazard" | "water";
+export type MarkerType = "car" | "fish" | "mushroom" | "hazard" | "water" | "note";
 
 export type MapMarker = {
   id: string;
@@ -7,6 +7,8 @@ export type MapMarker = {
   latitude: number;
   longitude: number;
   timestamp: number;
+  note?: string | null;
+  photo?: string | null;
 };
 
 export type RoutePoint = {

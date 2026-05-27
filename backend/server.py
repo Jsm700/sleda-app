@@ -23,7 +23,7 @@ api_router = APIRouter(prefix="/api")
 
 
 # ---------- Models ----------
-MarkerType = Literal["car", "fish", "mushroom", "hazard", "water"]
+MarkerType = Literal["car", "fish", "mushroom", "hazard", "water", "note"]
 
 
 class Marker(BaseModel):
@@ -32,6 +32,7 @@ class Marker(BaseModel):
     latitude: float
     longitude: float
     note: Optional[str] = None
+    photo: Optional[str] = None  # base64-encoded JPEG, no data URI prefix
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
@@ -74,6 +75,56 @@ def _clean(doc: dict) -> dict:
 @api_router.get("/")
 async def root():
     return {"message": "Sleda API", "status": "ok"}
+
+
+@api_router.get("/stats")
+async def stats():
+    """Aggregate statistics across all trips."""
+    cursor = db.trips.find({}, {"_id": 0})
+    total_trips = 0
+    total_distance_m = 0.0
+    total_duration_s = 0
+    markers_by_type: dict[str, int] = {}
+    async for trip in cursor:
+        total_trips += 1
+        total_distance_m += float(trip.get("distance_m") or 0)
+        total_duration_s += int(trip.get("duration_s") or 0)
+        for m in trip.get("markers", []) or []:
+            t = m.get("type")
+            if t:
+                markers_by_type[t] = markers_by_type.get(t, 0) + 1
+    return {
+        "total_trips": total_trips,
+        "total_distance_m": total_distance_m,
+        "total_duration_s": total_duration_s,
+        "markers_by_type": markers_by_type,
+    }
+
+
+@api_router.get("/photos")
+async def list_photos():
+    """Flat list of all photo markers across all trips - for the gallery."""
+    cursor = db.trips.find(
+        {"markers.photo": {"$exists": True, "$ne": None}},
+        {"_id": 0, "id": 1, "started_at": 1, "markers": 1},
+    )
+    photos: list[dict] = []
+    async for trip in cursor:
+        for m in trip.get("markers", []) or []:
+            if m.get("photo"):
+                photos.append({
+                    "trip_id": trip["id"],
+                    "trip_started_at": trip["started_at"],
+                    "marker_id": m.get("id"),
+                    "type": m.get("type"),
+                    "note": m.get("note"),
+                    "photo": m["photo"],
+                    "timestamp": m.get("timestamp"),
+                    "latitude": m.get("latitude"),
+                    "longitude": m.get("longitude"),
+                })
+    photos.sort(key=lambda p: p.get("timestamp") or "", reverse=True)
+    return photos
 
 
 @api_router.post("/trips", response_model=Trip)

@@ -1,0 +1,45 @@
+{
+  "summary": "Iteration 4 backend-only testing. Added /app/backend/tests/test_stats_and_photos.py (11 tests) covering GET /api/stats aggregation + shape, GET /api/photos shape + sort order + field contract, extended Marker model with 'note' type and photo+note fields, marker type validation, and base64 photo round-trip. Total 32/32 pytest items collected; 31 PASSED, 1 FAILED. The failure is a real backend bug in /api/photos: its MongoDB filter excludes trips whose markers array contains BOTH photo and non-photo markers (the normal case). Stats endpoint, marker model extension, and validation all work correctly.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "GET /api/photos",
+        "issue": "MongoDB query `{\"markers.photo\": {\"$exists\": True, \"$ne\": None}}` uses array dot-notation with $ne:null which is evaluated at the document level, not per element. Effect: a trip is matched ONLY if NO marker in the array has photo missing/null. In the realistic case (a trip has a few photo markers + many non-photo markers like car/fish/water), the trip is EXCLUDED and its photos never appear in the gallery. Verified empirically: trip with [photo, no-photo] markers -> 0 photos returned; trip with [photo] only -> 1 photo returned. Fix: use $elemMatch -> `{\"markers\": {\"$elemMatch\": {\"photo\": {\"$exists\": True, \"$ne\": None}}}}` (server.py line 107-110). Alternatively drop the Mongo-side filter entirely since the Python-side `if m.get('photo')` already filters per-marker.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_stats_and_photos.py",
+    "/app/backend/tests/test_trip_lifecycle.py",
+    "/app/backend/tests/test_trips.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Fix /api/photos query in /app/backend/server.py lines 107-110: replace `{\"markers.photo\": {\"$exists\": True, \"$ne\": None}}` with `{\"markers\": {\"$elemMatch\": {\"photo\": {\"$exists\": True, \"$ne\": None}}}}` so trips with mixed (photo + non-photo) markers are still selected. Then re-run pytest /app/backend/tests/test_stats_and_photos.py to confirm TestPhotosAggregation::test_photos_only_includes_photo_markers_sorted_desc passes."
+  ],
+  "critical_code_review_comments": [
+    "server.py /api/photos (lines 104-127): Mongo filter semantics bug as detailed above. Python-side dict filtering and sort-desc are correct.",
+    "server.py /api/stats (lines 80-101): correct - iterates all trips with _id excluded, sums distance_m/duration_s safely (defaulting None->0), aggregates markers_by_type. Verified by TestStatsAggregation with known deltas (100.0+250.5m distance, 60+90s duration, +2 car/+2 fish/+1 hazard/+1 note).",
+    "MarkerType Literal correctly extended to include 'note'; 422 returned for invalid types (verified for 'invalid', 'photo', 'video', '', 'NOTE').",
+    "Marker model photo: Optional[str] correctly round-trips base64 strings via PATCH and POST /markers (no truncation, exact byte-for-byte equality verified up to 5000-byte payloads).",
+    "_id is consistently excluded across new endpoints (projection {_id:0} on stats cursor, explicit field whitelist on photos cursor). Verified by test_photos_excludes_id and shape tests.",
+    "Minor (carryover from iter2): PATCH still filters out None values, so clients can't explicitly null-out ended_at. Not relevant to iter4 scope."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_stats_and_photos.py (new, 11 tests)"
+  ],
+  "success_rate": {"backend": "96.9% (31/32)", "frontend": "not-tested"},
+  "seed_data_creation": "All trips created in iter4 tests are prefixed TEST_iter4_* and cleaned up via test_zzz_cleanup_iter4 (DELETE).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "After main agent fixes /api/photos Mongo query, re-run: `EXPO_PUBLIC_BACKEND_URL=https://trace-fisher.preview.emergentagent.com pytest /app/backend/tests/ -v --junitxml=/app/test_reports/pytest/pytest_results.xml`. The failing test TestPhotosAggregation::test_photos_only_includes_photo_markers_sorted_desc should then pass. Other 31 tests are currently green. Backend tests live in: test_trips.py (iter1), test_trip_lifecycle.py (iter2), test_stats_and_photos.py (iter4). All use EXPO_PUBLIC_BACKEND_URL env var.",
+  "rca_of_issue": "Bug: GET /api/photos returns 0 entries for any trip that has mixed markers (some with photo, some without). RCA: In server.py, the Mongo cursor uses {'markers.photo': {'$exists': True, '$ne': None}}. In MongoDB array dot-notation matching, $ne:null returns false if ANY array element has the field missing or null. So a trip with markers=[{photo: '...'}, {type:'fish' /*no photo*/}] is rejected because the fish marker is treated as having photo==null. Reproduction (verified): POST a trip, PATCH markers=[{type:'note', photo:'<b64>'}, {type:'fish'}], GET /api/photos -> 0 entries. Same scenario but markers=[{type:'note', photo:'<b64>'}] only -> 1 entry. Fix: use $elemMatch per-element matching, or drop the Mongo filter and rely on the existing in-Python `if m.get('photo')` filter (server.py line 114) which is already correct."
+}
