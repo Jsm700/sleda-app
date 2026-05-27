@@ -49,7 +49,7 @@ const MARKER_BUTTONS: {
   { type: "fish", icon: "fish", color: colors.markerFish, labelKey: "fish" },
   { type: "mushroom", icon: "mushroom", color: colors.markerMushroom, labelKey: "mushroom" },
   { type: "hazard", icon: "alert", color: colors.markerHazard, labelKey: "hazard" },
-  { type: "water", icon: "water", color: colors.markerWater, labelKey: "water" },
+  { type: "poi", icon: "map-marker", color: colors.brand, labelKey: "poi" },
   { type: "note", icon: "note-edit-outline", color: colors.info, labelKey: "note" },
 ];
 
@@ -86,7 +86,7 @@ function formatDistance(m: number): string {
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { t } = useTranslation();
+  const { t, lang, setLang } = useTranslation();
   const mapRef = useRef<MapCanvasHandle>(null);
   const startTimeRef = useRef<number | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -102,6 +102,10 @@ export default function HomeScreen() {
   const [distance, setDistance] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [, setSaving] = useState(false);
+  const [noteModalOpen, setNoteModalOpen] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [notePhoto, setNotePhoto] = useState<string | null>(null);
+  const [noteCoords, setNoteCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const safeHaptic = useCallback((fn: () => Promise<void> | void) => {
     try {
@@ -488,6 +492,17 @@ export default function HomeScreen() {
               <Text style={styles.recordingText}>{t("tracking")}</Text>
             </View>
           )}
+
+          <View style={styles.langFloating} pointerEvents="box-none">
+            <Pressable
+              onPress={() => setLang(lang === "bg" ? "en" : "bg")}
+              style={styles.langPill}
+              testID="lang-toggle"
+            >
+              <MaterialCommunityIcons name="translate" size={16} color={colors.onSurface} />
+              <Text style={styles.langPillText}>{lang === "bg" ? "БГ" : "EN"}</Text>
+            </Pressable>
+          </View>
         </SafeAreaView>
 
         {!currentLocation && permissionStatus === "granted" && (
@@ -681,6 +696,19 @@ const styles = StyleSheet.create({
   },
   recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#fff" },
   recordingText: { color: "#fff", fontSize: 12, fontWeight: "800", letterSpacing: 0.6 },
+  langFloating: { position: "absolute", top: spacing.sm, right: spacing.md },
+  langPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(18,18,18,0.92)",
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: radius.pill,
+  },
+  langPillText: { color: colors.onSurface, fontSize: 12, fontWeight: "800", letterSpacing: 0.6 },
   locatingOverlay: {
     position: "absolute",
     bottom: spacing.lg,

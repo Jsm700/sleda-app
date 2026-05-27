@@ -1,5 +1,5 @@
 // Shared types between native and web map implementations.
-export type MarkerType = "car" | "fish" | "mushroom" | "hazard" | "water" | "note";
+export type MarkerType = "car" | "fish" | "mushroom" | "hazard" | "water" | "poi" | "note";
 
 export type MapMarker = {
   id: string;

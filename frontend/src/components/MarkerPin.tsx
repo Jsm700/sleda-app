@@ -12,6 +12,7 @@ const ICONS: Record<MarkerType, keyof typeof MaterialCommunityIcons.glyphMap> = 
   mushroom: "mushroom",
   hazard: "alert",
   water: "water",
+  poi: "map-marker",
   note: "note-edit-outline",
 };
 
@@ -21,6 +22,7 @@ const COLORS: Record<MarkerType, string> = {
   mushroom: colors.markerMushroom,
   hazard: colors.markerHazard,
   water: colors.markerWater,
+  poi: colors.brand,
   note: colors.info,
 };
 

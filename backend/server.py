@@ -23,7 +23,7 @@ api_router = APIRouter(prefix="/api")
 
 
 # ---------- Models ----------
-MarkerType = Literal["car", "fish", "mushroom", "hazard", "water", "note"]
+MarkerType = Literal["car", "fish", "mushroom", "hazard", "water", "poi", "note"]
 
 
 class Marker(BaseModel):

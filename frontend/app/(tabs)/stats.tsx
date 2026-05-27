@@ -10,12 +10,13 @@ import { api } from "@/src/api/client";
 import { formatDistance, formatDuration } from "@/src/utils/format";
 import type { MarkerType } from "@/src/components/MapCanvas.types";
 
-const MARKER_META: { type: MarkerType; icon: keyof typeof MaterialCommunityIcons.glyphMap; color: string; labelKey: "car" | "fish" | "mushroom" | "hazard" | "water" | "note" }[] = [
+const MARKER_META: { type: MarkerType; icon: keyof typeof MaterialCommunityIcons.glyphMap; color: string; labelKey: "car" | "fish" | "mushroom" | "hazard" | "water" | "poi" | "note" }[] = [
   { type: "car", icon: "car", color: colors.markerCar, labelKey: "car" },
   { type: "fish", icon: "fish", color: colors.markerFish, labelKey: "fish" },
   { type: "mushroom", icon: "mushroom", color: colors.markerMushroom, labelKey: "mushroom" },
   { type: "hazard", icon: "alert", color: colors.markerHazard, labelKey: "hazard" },
   { type: "water", icon: "water", color: colors.markerWater, labelKey: "water" },
+  { type: "poi", icon: "map-marker", color: colors.brand, labelKey: "poi" },
   { type: "note", icon: "note-edit-outline", color: colors.info, labelKey: "note" },
 ];
 

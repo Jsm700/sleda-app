@@ -18,6 +18,8 @@ const MARKER_COLORS: Record<MarkerType, string> = {
   mushroom: colors.markerMushroom,
   hazard: colors.markerHazard,
   water: colors.markerWater,
+  poi: colors.brand,
+  note: colors.info,
 };
 
 const MARKER_LABELS_BG: Record<MarkerType, string> = {
@@ -26,6 +28,8 @@ const MARKER_LABELS_BG: Record<MarkerType, string> = {
   mushroom: "Гъба",
   hazard: "Опасност",
   water: "Чешма",
+  poi: "Маркер",
+  note: "Бележка",
 };
 const MARKER_LABELS_EN: Record<MarkerType, string> = {
   car: "Car / Boat",
@@ -33,6 +37,8 @@ const MARKER_LABELS_EN: Record<MarkerType, string> = {
   mushroom: "Mushroom",
   hazard: "Hazard",
   water: "Water",
+  poi: "Marker",
+  note: "Note",
 };
 
 export default function TripDetailScreen() {

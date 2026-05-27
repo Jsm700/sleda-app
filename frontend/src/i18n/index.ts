@@ -10,7 +10,7 @@ const translations = {
   bg: {
     appName: "Следа",
     home: "Начало",
-    archive: "Архив",
+    archive: "Следи",
     start: "СТАРТ",
     stop: "СТОП",
     car: "Кола / Лодка",
@@ -18,6 +18,7 @@ const translations = {
     mushroom: "Гъба",
     hazard: "Опасност",
     water: "Чешма",
+    poi: "Маркер",
     note: "Бележка",
     addNote: "Добави бележка",
     note_text: "Текст",
@@ -66,7 +67,7 @@ const translations = {
   en: {
     appName: "Sleda",
     home: "Home",
-    archive: "Archive",
+    archive: "Tracks",
     start: "START",
     stop: "STOP",
     car: "Car / Boat",
@@ -74,6 +75,7 @@ const translations = {
     mushroom: "Mushroom",
     hazard: "Hazard",
     water: "Water",
+    poi: "Marker",
     note: "Note",
     addNote: "Add note",
     note_text: "Text",

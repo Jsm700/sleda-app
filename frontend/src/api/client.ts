@@ -3,7 +3,7 @@
 
 const BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-export type MarkerType = "car" | "fish" | "mushroom" | "hazard" | "water" | "note";
+export type MarkerType = "car" | "fish" | "mushroom" | "hazard" | "water" | "poi" | "note";
 
 export type ApiMarker = {
   id?: string;
