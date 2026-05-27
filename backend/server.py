@@ -5,7 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Literal
 import uuid
 from datetime import datetime, timezone
@@ -34,6 +34,11 @@ class Marker(BaseModel):
     note: Optional[str] = None
     photo: Optional[str] = None  # base64-encoded JPEG, no data URI prefix
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def _fill_id(cls, v):
+        return v if (isinstance(v, str) and v) else str(uuid.uuid4())
 
 
 class RoutePoint(BaseModel):
@@ -105,7 +110,7 @@ async def stats():
 async def list_photos():
     """Flat list of all photo markers across all trips - for the gallery."""
     cursor = db.trips.find(
-        {"markers.photo": {"$exists": True, "$ne": None}},
+        {"markers": {"$elemMatch": {"photo": {"$exists": True, "$ne": None}}}},
         {"_id": 0, "id": 1, "started_at": 1, "markers": 1},
     )
     photos: list[dict] = []
@@ -152,6 +157,12 @@ async def get_trip(trip_id: str):
 @api_router.patch("/trips/{trip_id}", response_model=Trip)
 async def update_trip(trip_id: str, payload: TripUpdate):
     update = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if v is not None}
+    # Re-dump nested models fully so default_factory fields (id, timestamp)
+    # are included even if the client didn't send them.
+    if payload.markers is not None:
+        update["markers"] = [m.model_dump() for m in payload.markers]
+    if payload.route is not None:
+        update["route"] = [r.model_dump() for r in payload.route]
     if not update:
         doc = await db.trips.find_one({"id": trip_id}, {"_id": 0})
         if not doc:
