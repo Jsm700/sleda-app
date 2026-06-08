@@ -31,6 +31,11 @@ import { colors, spacing, radius } from "@/src/theme/colors";
 import { useTranslation, type TranslationKey } from "@/src/i18n";
 import { api } from "@/src/api/client";
 import {
+  savePendingTrip,
+  loadPendingTrip,
+  clearPendingTrip,
+} from "@/src/utils/pendingTrip";
+import {
   LOCATION_TASK_NAME,
   clearStoredRoute,
   isTrackingActive,
@@ -163,11 +168,70 @@ export default function HomeScreen() {
     }
   }, []);
 
+  // ----- Upload a pending trip that failed to save previously -----
+  const uploadPendingTrip = useCallback(async () => {
+    const pending = await loadPendingTrip();
+    if (!pending) return;
+    try {
+      const id = pending.tripId ?? (await api.createTrip()).id;
+      await api.updateTrip(id, {
+        ended_at: pending.endedAt,
+        route: pending.route,
+        markers: pending.markers,
+        distance_m: pending.distance_m,
+        duration_s: pending.duration_s,
+      });
+      await clearPendingTrip();
+      Alert.alert(t("uploadSuccess") ?? "\u041c\u0430\u0440\u0448\u0440\u0443\u0442\u044a\u0442 \u0435 \u043a\u0430\u0447\u0435\u043d \u0443\u0441\u043f\u0435\u0448\u043d\u043e!");
+    } catch (e) {
+      console.warn("uploadPendingTrip failed", e);
+      // Оставяме pending — ще опитаме пак при следващо отваряне.
+    }
+  }, [t]);
+
+  // ----- Check for pending trip on startup -----
+  const checkPendingTrip = useCallback(async () => {
+    const pending = await loadPendingTrip();
+    if (!pending) return;
+    Alert.alert(
+      t("pendingTitle") ?? "\u041d\u0435\u0437\u0430\u043f\u0430\u0437\u0435\u043d \u043c\u0430\u0440\u0448\u0440\u0443\u0442",
+      t("pendingBody") ?? "\u041f\u043e\u0441\u043b\u0435\u0434\u043d\u0438\u044f\u0442 \u043c\u0430\u0440\u0448\u0440\u0443\u0442 \u043d\u0435 \u0435 \u043a\u0430\u0447\u0435\u043d. \u0414\u0430 \u043e\u043f\u0438\u0442\u0430\u043c\u0435 \u0441\u0435\u0433\u0430?",
+      [
+        {
+          text: t("pendingDiscard") ?? "\u0418\u0437\u0442\u0440\u0438\u0439",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              t("pendingDiscardTitle") ?? "\u0421\u0438\u0433\u0443\u0440\u0435\u043d \u043b\u0438 \u0441\u0438?",
+              "\u041c\u0430\u0440\u0448\u0440\u0443\u0442\u044a\u0442 \u0449\u0435 \u0431\u044a\u0434\u0435 \u0438\u0437\u0442\u0440\u0438\u0442 \u0437\u0430\u0432\u0438\u043d\u0430\u0433\u0438!",
+              [
+                { text: t("pendingDiscardCancel") ?? "\u041e\u0442\u043a\u0430\u0437", style: "cancel" },
+                {
+                  text: t("pendingDiscardConfirm") ?? "\u0414\u0430, \u0438\u0437\u0442\u0440\u0438\u0439",
+                  style: "destructive",
+                  onPress: clearPendingTrip,
+                },
+              ],
+            );
+          },
+        },
+        {
+          text: t("pendingUpload") ?? "\u041a\u0430\u0447\u0438",
+          onPress: uploadPendingTrip,
+        },
+      ],
+    );
+  }, [t, uploadPendingTrip]);
+
   // ----- Recover an in-progress trip if user re-opens the app -----
   const recoverActiveTrip = useCallback(async () => {
     try {
       const active = await isTrackingActive();
-      if (!active) return;
+      if (!active) {
+        // No active tracking — check for a pending (failed) save instead.
+        await checkPendingTrip();
+        return;
+      }
       const { id, startedAt } = await readActiveTrip();
       if (!id || !startedAt) return;
       tripIdRef.current = id;
@@ -179,7 +243,7 @@ export default function HomeScreen() {
     } catch (e) {
       console.warn("recoverActiveTrip failed", e);
     }
-  }, [refreshFromStorage, startPolling]);
+  }, [refreshFromStorage, startPolling, checkPendingTrip]);
 
   useEffect(() => {
     initLocation();
@@ -318,19 +382,33 @@ export default function HomeScreen() {
       setDistance(finalDistance);
 
       setSaving(true);
+      const endedAt = new Date().toISOString();
       try {
         const id = tripIdRef.current ?? (await api.createTrip()).id;
         await api.updateTrip(id, {
-          ended_at: new Date().toISOString(),
+          ended_at: endedAt,
           route: finalRoute,
           markers: finalMarkers,
           distance_m: finalDistance,
           duration_s: finalDurationS,
         });
+        await clearPendingTrip();
         Alert.alert(t("tripSavedTitle"), t("tripSavedBody"));
       } catch (e) {
-        console.warn("save trip failed", e);
-        Alert.alert(t("saveError"), String(e));
+        console.warn("save trip failed, storing locally", e);
+        await savePendingTrip({
+          tripId: tripIdRef.current,
+          startedAt: new Date(startTimeRef.current ?? Date.now()).toISOString(),
+          endedAt,
+          route: finalRoute,
+          markers: finalMarkers,
+          distance_m: finalDistance,
+          duration_s: finalDurationS,
+        });
+        Alert.alert(
+          t("saveError"),
+          "\u041c\u0430\u0440\u0448\u0440\u0443\u0442\u044a\u0442 \u0435 \u0437\u0430\u043f\u0430\u0437\u0435\u043d \u043b\u043e\u043a\u0430\u043b\u043d\u043e \u0438 \u0449\u0435 \u0431\u044a\u0434\u0435 \u043a\u0430\u0447\u0435\u043d \u043f\u0440\u0438 \u0441\u043b\u0435\u0434\u0432\u0430\u0449\u043e \u043e\u0442\u0432\u0430\u0440\u044f\u043d\u0435.",
+        );
       } finally {
         setSaving(false);
         await clearStoredRoute();
