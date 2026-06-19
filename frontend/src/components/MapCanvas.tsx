@@ -34,7 +34,7 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
       showsUserLocation
       showsMyLocationButton={false}
       showsCompass
-      mapType={Platform.OS === "android" ? "none" : "standard"}
+      mapType="standard"
       testID="map-view"
     >
       <UrlTile
