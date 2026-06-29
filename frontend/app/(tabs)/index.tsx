@@ -631,6 +631,13 @@ export default function HomeScreen() {
           ))}
         </View>
 
+       <Pressable
+          onPress={() => setGhostModalOpen(true)}
+          style={styles.ghostBtn}
+        >
+          <MaterialCommunityIcons name="map-marker-path" size={24} color={colors.onSurface} />
+          <Text style={styles.markerLabel}>Ghost</Text>
+        </Pressable>
         <Pressable
           onPress={handleStartStop}
           style={({ pressed }) => [
