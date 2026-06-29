@@ -103,6 +103,8 @@ export default function HomeScreen() {
   const [isTracking, setIsTracking] = useState(false);
   const [route, setRoute] = useState<RoutePoint[]>([]);
   const [markers, setMarkers] = useState<MapMarker[]>([]);
+  const [ghostRoute, setGhostRoute] = useState<RoutePoint[]>([]);
+  const [ghostModalOpen, setGhostModalOpen] = useState(false);
   const [distance, setDistance] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [, setSaving] = useState(false);
