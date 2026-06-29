@@ -658,6 +658,25 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
+     {/* Ghost track modal */}
+      <Modal
+        visible={ghostModalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setGhostModalOpen(false)}
+      >
+        <View style={styles.modalRoot}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Ghost Track</Text>
+              <Pressable onPress={() => setGhostModalOpen(false)} style={styles.modalClose}>
+                <MaterialCommunityIcons name="close" size={24} color={colors.onSurface} />
+              </Pressable>
+            </View>
+            <GhostTrackPicker onSelect={(route) => { setGhostRoute(route); setGhostModalOpen(false); }} onClear={() => { setGhostRoute([]); setGhostModalOpen(false); }} />
+          </View>
+        </View>
+      </Modal>
       {/* Note modal: title + optional photo */}
       <Modal
         visible={noteModalOpen}
