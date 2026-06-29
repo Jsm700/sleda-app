@@ -35,6 +35,7 @@ import {
   loadPendingTrip,
   clearPendingTrip,
 } from "@/src/utils/pendingTrip";
+
 import {
   LOCATION_TASK_NAME,
   clearStoredRoute,
@@ -43,7 +44,7 @@ import {
   readStoredRoute,
   setActiveTrip,
 } from "@/src/tracking/locationTask";
-
+import GhostTrackPicker from "@/src/components/GhostTrackPicker";
 const MARKER_BUTTONS: {
   type: MarkerType;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
