@@ -537,6 +537,7 @@ export default function HomeScreen() {
           ref={mapRef}
           initialRegion={initialRegion}
           route={route}
+          ghostRoute={ghostRoute}
           markers={markers}
           brandColor={colors.brand}
           markerColorFor={markerColorFor}
