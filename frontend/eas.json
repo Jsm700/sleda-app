@@ -22,7 +22,7 @@
         "simulator": false
       },
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://trace-fisher.preview.emergentagent.com"
+        "EXPO_PUBLIC_BACKEND_URL": "https://sleda-app.onrender.com"
       }
     },
     "production": {
@@ -34,7 +34,7 @@
         "simulator": false
       },
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://trace-fisher.preview.emergentagent.com"
+        "EXPO_PUBLIC_BACKEND_URL": "https://sleda-app.onrender.com"
       }
     }
   },
