@@ -853,6 +853,18 @@ const styles = StyleSheet.create({
   },
   markerBtnPressed: { backgroundColor: colors.surfaceTertiary, transform: [{ scale: 0.96 }] },
   markerLabel: { color: colors.onSurface, fontSize: 10, fontWeight: "700", letterSpacing: 0.3, textAlign: "center" },
+ ghostBtn: {
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
   startStopBtn: {
     minHeight: 72,
     borderRadius: radius.md,
