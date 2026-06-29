@@ -25,6 +25,7 @@ export type MapCanvasProps = {
     longitudeDelta: number;
   };
   route: RoutePoint[];
+  ghostRoute?: RoutePoint[];
   markers: MapMarker[];
   brandColor: string;
   markerColorFor: (t: MarkerType) => string;
