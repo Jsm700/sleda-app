@@ -674,7 +674,9 @@ export default function HomeScreen() {
                 <MaterialCommunityIcons name="close" size={24} color={colors.onSurface} />
               </Pressable>
             </View>
-            <GhostTrackPicker onSelect={(route) => { setGhostRoute(route); setGhostModalOpen(false); }} onClear={() => { setGhostRoute([]); setGhostModalOpen(false); }} />
+            <View style={{ maxHeight: 400 }}>
+              <GhostTrackPicker onSelect={(route) => { setGhostRoute(route); setGhostModalOpen(false); }} onClear={() => { setGhostRoute([]); setGhostModalOpen(false); }} />
+            </View>
           </View>
         </View>
       </Modal>
