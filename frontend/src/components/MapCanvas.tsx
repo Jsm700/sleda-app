@@ -49,9 +49,8 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
         <Polyline coordinates={route} strokeColor={brandColor} strokeWidth={5} />
       )}
       {ghostRoute && ghostRoute.length > 1 && (
-        <Polyline coordinates={ghostRoute} strokeColor="rgba(255,255,255,0.45)" strokeWidth={3} lineDashPattern={[8, 6]} />
+        <Polyline coordinates={ghostRoute} strokeColor="#FF00FF" strokeWidth={8} lineDashPattern={[8, 6]} />
       )}
-
       {markers.map((m) => (
         <Marker
           key={m.id}
