@@ -156,7 +156,7 @@ export default function HomeScreen() {
     setRoute(points);
     setDistance(computeTotalDistance(points));
     const last = points[points.length - 1];
-    setCurrentLocation((prev) => prev ?? ({ latitude: last.latitude, longitude: last.longitude } as Location.LocationObjectCoords));
+    setCurrentLocation({ latitude: last.latitude, longitude: last.longitude } as Location.LocationObjectCoords);
   }, []);
 
   const startPolling = useCallback(() => {
