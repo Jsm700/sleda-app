@@ -31,7 +31,11 @@ export default function GhostTrackPicker({ onSelect, onClear }: Props) {
         <Pressable
           key={trip.id}
           style={styles.tripRow}
-          onPress={() => onSelect(trip.route.map((p) => ({ latitude: p.latitude, longitude: p.longitude, timestamp: new Date(p.timestamp).getTime() })))}
+        onPress={() => {
+            const mapped = trip.route.map((p) => ({ latitude: p.latitude, longitude: p.longitude, timestamp: new Date(p.timestamp).getTime() }));
+            console.log("Ghost route selected, points:", mapped.length);
+            onSelect(mapped);
+          }}
         >
           <Text style={styles.tripDate}>{new Date(trip.started_at).toLocaleDateString("bg-BG")}</Text>
           <Text style={styles.tripInfo}>{(trip.distance_m / 1000).toFixed(2)} km · {trip.route.length} точки</Text>
