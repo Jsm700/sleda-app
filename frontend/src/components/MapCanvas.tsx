@@ -15,7 +15,7 @@ const TILE_CACHE_PATH =
     : undefined;
 
 const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
-  { initialRegion, route, markers, brandColor, markerLabelFor },
+ { initialRegion, route, ghostRoute, markers, brandColor, markerLabelFor },
   ref,
 ) {
   const reg: Region = {
