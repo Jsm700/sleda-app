@@ -675,7 +675,7 @@ export default function HomeScreen() {
               </Pressable>
             </View>
             <View style={{ maxHeight: 400 }}>
-            <GhostTrackPicker onSelect={(route) => { console.log("Setting ghostRoute, length:", route.length, "first point:", JSON.stringify(route[0])); setGhostRoute(route); setGhostModalOpen(false); }} onClear={() => { setGhostRoute([]); setGhostModalOpen(false); }} />
+<GhostTrackPicker onSelect={(route) => { console.log("Setting ghostRoute, length:", route.length, "first point:", JSON.stringify(route[0])); setGhostRoute(route); setGhostModalOpen(false); }} onClear={() => { setGhostRoute([]); setGhostModalOpen(false); }} />
             </View>
           </View>
         </View>
