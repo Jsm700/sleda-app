@@ -557,7 +557,7 @@ export default function HomeScreen() {
           {isTracking && (
             <View style={styles.recordingBadge} pointerEvents="none">
               <View style={styles.recordingDot} />
-              <Text style={styles.recordingText">{t("tracking")}</Text>
+              <Text style={styles.recordingText}>{t("tracking")}</Text>
             </View>
           )}
 
