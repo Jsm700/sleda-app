@@ -105,7 +105,9 @@ export default function HomeScreen() {
   const [route, setRoute] = useState<RoutePoint[]>([]);
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [ghostRoute, setGhostRoute] = useState<RoutePoint[]>([]);
+  const [ghostMarkers, setGhostMarkers] = useState<MapMarker[]>([]);
   const [ghostModalOpen, setGhostModalOpen] = useState(false);
+  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [distance, setDistance] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [, setSaving] = useState(false);
@@ -149,7 +151,6 @@ export default function HomeScreen() {
     }
   }, []);
 
-  // ----- Storage polling: pull background route points into UI -----
   const refreshFromStorage = useCallback(async () => {
     const points = await readStoredRoute();
     if (points.length === 0) return;
@@ -171,7 +172,6 @@ export default function HomeScreen() {
     }
   }, []);
 
-  // ----- Upload a pending trip that failed to save previously -----
   const uploadPendingTrip = useCallback(async () => {
     const pending = await loadPendingTrip();
     if (!pending) return;
@@ -188,11 +188,9 @@ export default function HomeScreen() {
       Alert.alert(t("uploadSuccess") ?? "\u041c\u0430\u0440\u0448\u0440\u0443\u0442\u044a\u0442 \u0435 \u043a\u0430\u0447\u0435\u043d \u0443\u0441\u043f\u0435\u0448\u043d\u043e!");
     } catch (e) {
       console.warn("uploadPendingTrip failed", e);
-      // Оставяме pending — ще опитаме пак при следващо отваряне.
     }
   }, [t]);
 
-  // ----- Check for pending trip on startup -----
   const checkPendingTrip = useCallback(async () => {
     const pending = await loadPendingTrip();
     if (!pending) return;
@@ -226,12 +224,10 @@ export default function HomeScreen() {
     );
   }, [t, uploadPendingTrip]);
 
-  // ----- Recover an in-progress trip if user re-opens the app -----
   const recoverActiveTrip = useCallback(async () => {
     try {
       const active = await isTrackingActive();
       if (!active) {
-        // No active tracking — check for a pending (failed) save instead.
         await checkPendingTrip();
         return;
       }
@@ -261,7 +257,6 @@ export default function HomeScreen() {
     };
   }, [initLocation, recoverActiveTrip, refreshFromStorage, stopPolling]);
 
-  // ----- Timer -----
   useEffect(() => {
     if (isTracking) {
       if (!startTimeRef.current) startTimeRef.current = Date.now();
@@ -279,7 +274,6 @@ export default function HomeScreen() {
     };
   }, [isTracking]);
 
-  // ----- START / STOP -----
   const handleStartStop = useCallback(async () => {
     if (permissionStatus !== "granted") {
       await initLocation();
@@ -287,8 +281,6 @@ export default function HomeScreen() {
     }
 
     if (!isTracking) {
-      // Ask for background permission. Reduced capability if denied: we
-      // still track but only while screen is on (foreground service).
       let canBackground = true;
       try {
         const bg = await Location.requestBackgroundPermissionsAsync();
@@ -307,7 +299,6 @@ export default function HomeScreen() {
       startTimeRef.current = Date.now();
       setIsTracking(true);
 
-      // Create trip in backend - get id for later PATCH.
       try {
         const trip = await api.createTrip();
         tripIdRef.current = trip.id;
@@ -316,7 +307,6 @@ export default function HomeScreen() {
         console.warn("createTrip failed", e);
       }
 
-      // Start the foreground/background location task.
       try {
         await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
           accuracy: Location.Accuracy.High,
@@ -327,8 +317,8 @@ export default function HomeScreen() {
           foregroundService:
             Platform.OS === "android"
               ? {
-                  notificationTitle: "Следа",
-                  notificationBody: "Записва маршрут",
+                  notificationTitle: "\u0421\u043b\u0435\u0434\u0430",
+                  notificationBody: "\u0417\u0430\u043f\u0438\u0441\u0432\u0430 \u043c\u0430\u0440\u0448\u0440\u0443\u0442",
                   notificationColor: colors.brand,
                 }
               : undefined,
@@ -341,10 +331,7 @@ export default function HomeScreen() {
       }
 
       if (!canBackground) {
-        Alert.alert(
-          t("permissionRequired"),
-          t("permissionMessage"),
-        );
+        Alert.alert(t("permissionRequired"), t("permissionMessage"));
       }
 
       startPolling();
@@ -359,7 +346,6 @@ export default function HomeScreen() {
         console.warn("stopLocationUpdatesAsync failed", e);
       }
 
-      // Final read of accumulated points.
       const finalPoints = await readStoredRoute();
       const finalDistance = computeTotalDistance(finalPoints);
       const finalDurationS = startTimeRef.current
@@ -428,7 +414,6 @@ export default function HomeScreen() {
         return;
       }
       if (type === "note") {
-        // Open the note modal - photo + text will be captured before adding.
         setNoteCoords({
           latitude: currentLocation.latitude,
           longitude: currentLocation.longitude,
@@ -539,10 +524,12 @@ export default function HomeScreen() {
           initialRegion={initialRegion}
           route={route}
           ghostRoute={ghostRoute}
+          ghostMarkers={ghostMarkers}
           markers={markers}
           brandColor={colors.brand}
           markerColorFor={markerColorFor}
           markerLabelFor={markerLabelFor}
+          onMarkerPress={(m) => { if (m.photo || m.note) setSelectedMarker(m); }}
         />
 
         <SafeAreaView edges={["top"]} style={styles.topOverlay} pointerEvents="box-none">
@@ -570,7 +557,7 @@ export default function HomeScreen() {
           {isTracking && (
             <View style={styles.recordingBadge} pointerEvents="none">
               <View style={styles.recordingDot} />
-              <Text style={styles.recordingText}>{t("tracking")}</Text>
+              <Text style={styles.recordingText">{t("tracking")}</Text>
             </View>
           )}
 
@@ -581,7 +568,7 @@ export default function HomeScreen() {
               testID="lang-toggle"
             >
               <MaterialCommunityIcons name="translate" size={16} color={colors.onSurface} />
-              <Text style={styles.langPillText}>{lang === "bg" ? "БГ" : "EN"}</Text>
+              <Text style={styles.langPillText}>{lang === "bg" ? "\u0411\u0413" : "EN"}</Text>
             </Pressable>
           </View>
         </SafeAreaView>
@@ -609,9 +596,7 @@ export default function HomeScreen() {
         )}
       </View>
 
-      <View
-        style={[styles.controls, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}
-      >
+      <View style={[styles.controls, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
         <View style={styles.markerGrid}>
           {MARKER_BUTTONS.map((btn) => (
             <Pressable
@@ -632,7 +617,7 @@ export default function HomeScreen() {
           ))}
         </View>
 
-       <Pressable
+        <Pressable
           onPress={() => setGhostModalOpen(true)}
           style={styles.ghostBtn}
         >
@@ -659,7 +644,6 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-     {/* Ghost track modal */}
       <Modal
         visible={ghostModalOpen}
         animationType="slide"
@@ -675,12 +659,62 @@ export default function HomeScreen() {
               </Pressable>
             </View>
             <View style={{ maxHeight: 400 }}>
-<GhostTrackPicker onSelect={(route) => { console.log("Setting ghostRoute, length:", route.length, "first point:", JSON.stringify(route[0])); setGhostRoute(route); setGhostModalOpen(false); }} onClear={() => { setGhostRoute([]); setGhostModalOpen(false); }} />
+              <GhostTrackPicker
+                onSelect={(route, ghostMkrs) => {
+                  setGhostRoute(route);
+                  setGhostMarkers(ghostMkrs);
+                  setGhostModalOpen(false);
+                  if (route.length > 0) {
+                    const lats = route.map((p) => p.latitude);
+                    const lons = route.map((p) => p.longitude);
+                    const minLat = Math.min(...lats);
+                    const maxLat = Math.max(...lats);
+                    const minLon = Math.min(...lons);
+                    const maxLon = Math.max(...lons);
+                    const padLat = Math.max((maxLat - minLat) * 0.3, 0.005);
+                    const padLon = Math.max((maxLon - minLon) * 0.3, 0.005);
+                    setTimeout(() => {
+                      mapRef.current?.animateToRegion({
+                        latitude: (minLat + maxLat) / 2,
+                        longitude: (minLon + maxLon) / 2,
+                        latitudeDelta: (maxLat - minLat) + padLat,
+                        longitudeDelta: (maxLon - minLon) + padLon,
+                      }, 800);
+                    }, 300);
+                  }
+                }}
+                onClear={() => { setGhostRoute([]); setGhostMarkers([]); setGhostModalOpen(false); }}
+              />
             </View>
           </View>
         </View>
       </Modal>
-      {/* Note modal: title + optional photo */}
+
+      <Modal
+        visible={!!selectedMarker}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setSelectedMarker(null)}
+      >
+        <Pressable style={styles.photoViewerOverlay} onPress={() => setSelectedMarker(null)}>
+          <View style={styles.photoViewerCard} onStartShouldSetResponder={() => true}>
+            <Pressable onPress={() => setSelectedMarker(null)} style={styles.photoViewerClose}>
+              <MaterialCommunityIcons name="close" size={24} color={colors.onSurface} />
+            </Pressable>
+            {selectedMarker?.photo ? (
+              <Image
+                source={{ uri: `data:image/jpeg;base64,${selectedMarker.photo}` }}
+                style={styles.photoViewerImage}
+                resizeMode="contain"
+              />
+            ) : null}
+            {selectedMarker?.note ? (
+              <Text style={styles.photoViewerNote}>{selectedMarker.note}</Text>
+            ) : null}
+          </View>
+        </Pressable>
+      </Modal>
+
       <Modal
         visible={noteModalOpen}
         animationType="slide"
@@ -875,7 +909,7 @@ const styles = StyleSheet.create({
   },
   markerBtnPressed: { backgroundColor: colors.surfaceTertiary, transform: [{ scale: 0.96 }] },
   markerLabel: { color: colors.onSurface, fontSize: 10, fontWeight: "700", letterSpacing: 0.3, textAlign: "center" },
- ghostBtn: {
+  ghostBtn: {
     backgroundColor: colors.surfaceSecondary,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -957,4 +991,40 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   modalSaveText: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 0.5 },
+  photoViewerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.88)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.lg,
+  },
+  photoViewerCard: {
+    width: "100%",
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+  },
+  photoViewerClose: {
+    position: "absolute",
+    top: spacing.sm,
+    right: spacing.sm,
+    zIndex: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoViewerImage: {
+    width: "100%",
+    height: 340,
+    backgroundColor: colors.surfaceTertiary,
+  },
+  photoViewerNote: {
+    color: colors.onSurface,
+    fontSize: 15,
+    padding: spacing.md,
+    fontWeight: "500",
+  },
 });

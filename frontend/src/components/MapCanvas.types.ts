@@ -26,10 +26,12 @@ export type MapCanvasProps = {
   };
   route: RoutePoint[];
   ghostRoute?: RoutePoint[];
+  ghostMarkers?: MapMarker[];
   markers: MapMarker[];
   brandColor: string;
   markerColorFor: (t: MarkerType) => string;
   markerLabelFor: (t: MarkerType) => string;
+  onMarkerPress?: (marker: MapMarker) => void;
 };
 
 export type MapCanvasHandle = {

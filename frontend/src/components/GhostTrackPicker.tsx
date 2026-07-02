@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { View, Text, Pressable, ActivityIndicator, ScrollView, StyleSheet } from "react-native";
 import { api } from "@/src/api/client";
 import type { ApiTrip } from "@/src/api/client";
-import type { RoutePoint } from "./MapCanvas.types";
+import type { RoutePoint, MapMarker } from "./MapCanvas.types";
 import { colors, spacing, radius } from "@/src/theme/colors";
 
 type Props = {
-  onSelect: (route: RoutePoint[]) => void;
+  onSelect: (route: RoutePoint[], markers: MapMarker[]) => void;
   onClear: () => void;
 };
 
@@ -32,9 +32,18 @@ export default function GhostTrackPicker({ onSelect, onClear }: Props) {
           key={trip.id}
           style={styles.tripRow}
         onPress={() => {
-            const mapped = trip.route.map((p) => ({ latitude: p.latitude, longitude: p.longitude, timestamp: new Date(p.timestamp).getTime() }));
-            console.log("Ghost route selected, points:", mapped.length);
-            onSelect(mapped);
+            const mappedRoute = trip.route.map((p) => ({ latitude: p.latitude, longitude: p.longitude, timestamp: new Date(p.timestamp).getTime() }));
+            const mappedMarkers: MapMarker[] = (trip.markers ?? []).map((m) => ({
+              id: m.id ?? `${m.timestamp}-${m.type}`,
+              type: m.type,
+              latitude: m.latitude,
+              longitude: m.longitude,
+              timestamp: m.timestamp ? new Date(m.timestamp).getTime() : 0,
+              note: m.note ?? null,
+              photo: m.photo ?? null,
+            }));
+            console.log("Ghost route selected, points:", mappedRoute.length, "markers:", mappedMarkers.length);
+            onSelect(mappedRoute, mappedMarkers);
           }}
         >
           <Text style={styles.tripDate}>{new Date(trip.started_at).toLocaleDateString("bg-BG")}</Text>

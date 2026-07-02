@@ -6,16 +6,13 @@ import MarkerPin from "./MarkerPin";
 
 import type { MapCanvasProps } from "./MapCanvas.types";
 
-// On-device cache directory for OSM tiles - enables offline browsing of
-// previously visited map regions. Android caches tiles; iOS ignores the
-// path silently (react-native-maps limitation).
 const TILE_CACHE_PATH =
   Platform.OS !== "web" && FileSystem.cacheDirectory
     ? `${FileSystem.cacheDirectory}osm-tiles`
     : undefined;
 
 const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
- { initialRegion, route, ghostRoute, markers, brandColor, markerLabelFor },
+ { initialRegion, route, ghostRoute, ghostMarkers, markers, brandColor, markerLabelFor, onMarkerPress },
   ref,
 ) {
   const reg: Region = {
@@ -51,6 +48,19 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
       {ghostRoute && ghostRoute.length > 1 && (
         <Polyline coordinates={ghostRoute} strokeColor="#FF00FF" strokeWidth={8} lineDashPattern={[8, 6]} />
       )}
+      {(ghostMarkers ?? []).map((m) => (
+        <Marker
+          key={`ghost-${m.id}`}
+          coordinate={{ latitude: m.latitude, longitude: m.longitude }}
+          title={markerLabelFor(m.type)}
+          description={m.note ?? undefined}
+          anchor={{ x: 0.5, y: 0.5 }}
+          onPress={() => onMarkerPress?.(m)}
+          opacity={0.7}
+        >
+          <MarkerPin type={m.type} />
+        </Marker>
+      ))}
       {markers.map((m) => (
         <Marker
           key={m.id}
@@ -58,6 +68,7 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
           title={markerLabelFor(m.type)}
           description={m.note ?? undefined}
           anchor={{ x: 0.5, y: 0.5 }}
+          onPress={() => onMarkerPress?.(m)}
         >
           <MarkerPin type={m.type} />
         </Marker>
