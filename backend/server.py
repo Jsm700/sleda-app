@@ -85,9 +85,10 @@ async def root():
 
 
 @api_router.get("/stats")
-async def stats():
+async def stats(device_id: Optional[str] = None):
     """Aggregate statistics across all trips."""
-    cursor = db.trips.find({}, {"_id": 0})
+    query = {"device_id": device_id} if device_id else {}
+    cursor = db.trips.find(query, {"_id": 0})
     total_trips = 0
     total_distance_m = 0.0
     total_duration_s = 0
