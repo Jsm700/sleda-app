@@ -46,7 +46,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  listTrips: () => request<ApiTrip[]>("/trips"),
+  listTrips: (device_id?: string) => request<ApiTrip[]>(`/trips${device_id ? `?device_id=${device_id}` : ""}`),
   getTrip: (id: string) => request<ApiTrip>(`/trips/${id}`),
   createTrip: (name?: string, device_id?: string) =>
     request<ApiTrip>("/trips", {
