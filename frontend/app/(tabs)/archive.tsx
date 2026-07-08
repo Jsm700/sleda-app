@@ -189,6 +189,7 @@ const styles = StyleSheet.create({
   retryText: { color: "#fff", fontSize: 16, fontWeight: "800", letterSpacing: 0.5 },
   emptyTitle: { color: colors.onSurface, fontSize: 18, fontWeight: "800", marginTop: spacing.md, textAlign: "center" },
   emptySub: { color: colors.onSurfaceTertiary, fontSize: 14, textAlign: "center" },
+  codeBtn: { padding: spacing.sm },
   listContent: { padding: spacing.md, gap: spacing.md },
   card: {
     backgroundColor: colors.surfaceSecondary,
