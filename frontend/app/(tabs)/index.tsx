@@ -44,6 +44,7 @@ import {
   readStoredRoute,
   setActiveTrip,
 } from "@/src/tracking/locationTask";
+import { getDeviceId } from "@/src/utils/deviceId";
 import GhostTrackPicker from "@/src/components/GhostTrackPicker";
 const MARKER_BUTTONS: {
   type: MarkerType;
