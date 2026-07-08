@@ -78,5 +78,5 @@ export const api = {
       timestamp: string;
       latitude: number;
       longitude: number;
-    }[]>("/photos"),
+   }[]>(`/photos${device_id ? `?device_id=${device_id}` : ""}`),
 };
