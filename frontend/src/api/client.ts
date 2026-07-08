@@ -60,13 +60,13 @@ export const api = {
     }),
   deleteTrip: (id: string) =>
     request<{ deleted: boolean }>(`/trips/${id}`, { method: "DELETE" }),
-  getStats: () =>
+ getStats: (device_id?: string) =>
     request<{
       total_trips: number;
       total_distance_m: number;
       total_duration_s: number;
       markers_by_type: Record<MarkerType, number>;
-    }>("/stats"),
+    }>(`/stats${device_id ? `?device_id=${device_id}` : ""}`),
   listPhotos: () =>
     request<{
       trip_id: string;
