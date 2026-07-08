@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Modal, View, Text, Pressable, StyleSheet, Clipboard } from "react-native";
+import { Modal, View, Text, Pressable, StyleSheet, Clipboard, TextInput } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getDeviceId } from "@/src/utils/deviceId";
+import { getDeviceId, setDeviceId } from "@/src/utils/deviceId";
 import { colors, spacing, radius } from "@/src/theme/colors";
 
 const SHOWN_KEY = "sleda.device_id_shown";
@@ -10,6 +10,9 @@ export default function DeviceIdModal() {
   const [visible, setVisible] = useState(false);
   const [code, setCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const [mode, setMode] = useState<"show" | "restore">("show");
+  const [inputCode, setInputCode] = useState("");
+  const [restoreError, setRestoreError] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -31,23 +34,63 @@ export default function DeviceIdModal() {
     setVisible(false);
   };
 
+  const handleRestore = async () => {
+    const trimmed = inputCode.trim().toUpperCase();
+    if (!trimmed) {
+      setRestoreError(true);
+      return;
+    }
+    await setDeviceId(trimmed);
+    await AsyncStorage.setItem(SHOWN_KEY, "1");
+    setVisible(false);
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.title}>Твоят код за достъп</Text>
-          <Text style={styles.body}>
-            Запази този код! При смяна на телефон или преинсталация ще можеш да възстановиш всичките си маршрути.
-          </Text>
-          <View style={styles.codeBox}>
-            <Text style={styles.code}>{code}</Text>
-          </View>
-          <Pressable style={styles.copyBtn} onPress={handleCopy}>
-            <Text style={styles.copyText}>{copied ? "✓ Копирано!" : "Копирай кода"}</Text>
-          </Pressable>
-          <Pressable style={styles.closeBtn} onPress={handleClose}>
-            <Text style={styles.closeText}>Разбрах, продължи</Text>
-          </Pressable>
+          {mode === "show" ? (
+            <>
+              <Text style={styles.title}>Твоят код за достъп</Text>
+              <Text style={styles.body}>
+                Запази този код! При смяна на телефон или преинсталация ще можеш да възстановиш всичките си маршрути.
+              </Text>
+              <View style={styles.codeBox}>
+                <Text style={styles.code}>{code}</Text>
+              </View>
+              <Pressable style={styles.copyBtn} onPress={handleCopy}>
+                <Text style={styles.copyText}>{copied ? "✓ Копирано!" : "Копирай кода"}</Text>
+              </Pressable>
+              <Pressable style={styles.closeBtn} onPress={handleClose}>
+                <Text style={styles.closeText}>Разбрах, продължи</Text>
+              </Pressable>
+              <Pressable onPress={() => setMode("restore")}>
+                <Text style={styles.restoreLink}>Вече имам код от стар телефон</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Text style={styles.title}>Въведи стар код</Text>
+              <Text style={styles.body}>
+                Въведи кода от предишния си телефон за да възстановиш маршрутите си.
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={inputCode}
+                onChangeText={(t) => { setInputCode(t); setRestoreError(false); }}
+                placeholder="напр. ВЪЛК-4721"
+                placeholderTextColor={colors.onSurfaceTertiary}
+                autoCapitalize="characters"
+              />
+              {restoreError && <Text style={styles.errorText}>Въведи валиден код</Text>}
+              <Pressable style={styles.closeBtn} onPress={handleRestore}>
+                <Text style={styles.closeText}>Възстанови маршрутите</Text>
+              </Pressable>
+              <Pressable onPress={() => setMode("show")}>
+                <Text style={styles.restoreLink}>Назад</Text>
+              </Pressable>
+            </>
+          )}
         </View>
       </View>
     </Modal>
@@ -65,4 +108,7 @@ const styles = StyleSheet.create({
   copyText: { color: colors.brand, fontWeight: "800", fontSize: 15 },
   closeBtn: { backgroundColor: colors.brand, borderRadius: radius.md, padding: spacing.md, alignItems: "center" },
   closeText: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  restoreLink: { color: colors.onSurfaceTertiary, fontSize: 13, textAlign: "center", textDecorationLine: "underline" },
+  input: { backgroundColor: colors.surfaceSecondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, color: colors.onSurface, fontSize: 18, fontWeight: "700", textAlign: "center", letterSpacing: 2 },
+  errorText: { color: colors.error, fontSize: 13, textAlign: "center" },
 });
