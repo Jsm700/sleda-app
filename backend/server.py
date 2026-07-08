@@ -50,6 +50,7 @@ class RoutePoint(BaseModel):
 class Trip(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: Optional[str] = None
+    device_id: Optional[str] = None
     started_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     ended_at: Optional[str] = None
     route: List[RoutePoint] = Field(default_factory=list)
