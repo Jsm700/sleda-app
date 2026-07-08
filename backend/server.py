@@ -133,20 +133,18 @@ async def list_photos():
     photos.sort(key=lambda p: p.get("timestamp") or "", reverse=True)
     return photos
 
-
 @api_router.post("/trips", response_model=Trip)
 async def create_trip(payload: TripCreate):
     trip = Trip(name=payload.name, device_id=payload.device_id)
     await db.trips.insert_one(trip.model_dump())
     return trip
 
-
 @api_router.get("/trips", response_model=List[Trip])
-async def list_trips():
-    cursor = db.trips.find({}, {"_id": 0}).sort("started_at", -1)
+async def list_trips(device_id: Optional[str] = None):
+    query = {"device_id": device_id} if device_id else {}
+    cursor = db.trips.find(query, {"_id": 0}).sort("started_at", -1)
     docs = await cursor.to_list(length=500)
     return [Trip(**d) for d in docs]
-
 
 @api_router.get("/trips/{trip_id}", response_model=Trip)
 async def get_trip(trip_id: str):
