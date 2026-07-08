@@ -48,10 +48,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   listTrips: () => request<ApiTrip[]>("/trips"),
   getTrip: (id: string) => request<ApiTrip>(`/trips/${id}`),
-  createTrip: (name?: string) =>
+  createTrip: (name?: string, device_id?: string) =>
     request<ApiTrip>("/trips", {
       method: "POST",
-      body: JSON.stringify({ name: name ?? null }),
+      body: JSON.stringify({ name: name ?? null, device_id: device_id ?? null }),
     }),
   updateTrip: (id: string, patch: Partial<ApiTrip>) =>
     request<ApiTrip>(`/trips/${id}`, {
