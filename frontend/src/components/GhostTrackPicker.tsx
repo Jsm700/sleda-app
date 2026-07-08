@@ -16,8 +16,10 @@ export default function GhostTrackPicker({ onSelect, onClear }: Props) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.listTrips()
-      .then((all) => setTrips(all.filter((t) => t.route && t.route.length > 1)))
+    getDeviceId().then((deviceId) =>
+      api.listTrips(deviceId)
+        .then((all) => setTrips(all.filter((t) => t.route && t.route.length > 1)))
+    )
       .finally(() => setLoading(false));
   }, []);
 
