@@ -15,6 +15,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useTranslation } from "@/src/i18n";
 import { colors, spacing, radius } from "@/src/theme/colors";
 import { api, type ApiTrip } from "@/src/api/client";
+import { getDeviceId } from "@/src/utils/deviceId";
 import { formatDateTime, formatDistance, formatDuration } from "@/src/utils/format";
 
 export default function ArchiveScreen() {
