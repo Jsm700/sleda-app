@@ -29,7 +29,8 @@ export default function ArchiveScreen() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const data = await api.listTrips();
+      const deviceId = await getDeviceId();
+      const data = await api.listTrips(deviceId);
       setTrips(data);
     } catch (e) {
       setError(String(e));
