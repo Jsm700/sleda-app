@@ -61,6 +61,7 @@ class Trip(BaseModel):
 
 class TripCreate(BaseModel):
     name: Optional[str] = None
+    device_id: Optional[str] = None
 
 
 class TripUpdate(BaseModel):
