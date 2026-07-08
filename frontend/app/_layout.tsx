@@ -7,6 +7,7 @@ import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 // Register the background location task at module import time (before any
 // screen mounts) - required by expo-task-manager.
 import "@/src/tracking/locationTask";
+import DeviceIdModal from "@/src/components/DeviceIdModal";
 
 // Keep the native splash visible from cold start until icon fonts register.
 // Required because @expo/vector-icons' componentDidMount fallback fires
