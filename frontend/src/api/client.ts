@@ -67,7 +67,7 @@ export const api = {
       total_duration_s: number;
       markers_by_type: Record<MarkerType, number>;
     }>(`/stats${device_id ? `?device_id=${device_id}` : ""}`),
-  listPhotos: () =>
+  listPhotos: (device_id?: string) =>
     request<{
       trip_id: string;
       trip_started_at: string;
