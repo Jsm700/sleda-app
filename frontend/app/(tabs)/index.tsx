@@ -299,9 +299,10 @@ export default function HomeScreen() {
       setElapsed(0);
       startTimeRef.current = Date.now();
       setIsTracking(true);
-
-      try {
-        const trip = await api.createTrip();
+try {
+        const deviceId = await getDeviceId();
+        const trip = await api.createTrip(undefined, deviceId);
+     
         tripIdRef.current = trip.id;
         await setActiveTrip(trip.id, startTimeRef.current);
       } catch (e) {
