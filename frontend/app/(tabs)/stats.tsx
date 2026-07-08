@@ -38,7 +38,8 @@ export default function StatsScreen() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const data = (await api.getStats()) as Stats;
+     const deviceId = await getDeviceId();
+      const data = (await api.getStats(deviceId)) as Stats; 
       setStats(data);
     } catch (e) {
       setError(String(e));
