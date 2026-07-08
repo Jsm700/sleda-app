@@ -4,6 +4,7 @@ import { api } from "@/src/api/client";
 import type { ApiTrip } from "@/src/api/client";
 import type { RoutePoint, MapMarker } from "./MapCanvas.types";
 import { colors, spacing, radius } from "@/src/theme/colors";
+import { getDeviceId } from "@/src/utils/deviceId";
 
 type Props = {
   onSelect: (route: RoutePoint[], markers: MapMarker[]) => void;
