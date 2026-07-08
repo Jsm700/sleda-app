@@ -7,6 +7,7 @@ import { useFocusEffect } from "expo-router";
 import { useTranslation } from "@/src/i18n";
 import { colors, spacing, radius } from "@/src/theme/colors";
 import { api } from "@/src/api/client";
+import { getDeviceId } from "@/src/utils/deviceId";
 import { formatDateTime } from "@/src/utils/format";
 
 type Photo = {
