@@ -136,7 +136,7 @@ async def list_photos():
 
 @api_router.post("/trips", response_model=Trip)
 async def create_trip(payload: TripCreate):
-    trip = Trip(name=payload.name)
+    trip = Trip(name=payload.name, device_id=payload.device_id)
     await db.trips.insert_one(trip.model_dump())
     return trip
 
