@@ -28,5 +28,10 @@ export default function RootLayout() {
   // the app — icons will tofu, but the app still boots.
   if (!loaded && !error) return null;
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+ return (
+    <>
+      <Stack screenOptions={{ headerShown: false }} />
+      <DeviceIdModal />
+    </>
+  ); 
 }
