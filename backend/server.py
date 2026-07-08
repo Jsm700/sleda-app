@@ -112,7 +112,7 @@ async def stats(device_id: Optional[str] = None):
 @api_router.get("/photos")
 async def list_photos(device_id: Optional[str] = None):
     """Flat list of all photo markers across all trips - for the gallery."""
-   query = {"device_id": device_id} if device_id else {}
+    query = {"device_id": device_id} if device_id else {}
     query["markers"] = {"$elemMatch": {"photo": {"$exists": True, "$ne": None}}}
     cursor = db.trips.find(
         query,
