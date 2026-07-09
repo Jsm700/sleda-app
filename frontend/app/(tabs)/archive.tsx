@@ -88,7 +88,7 @@ export default function ArchiveScreen() {
         <Text style={styles.title}>{t("archive")}</Text>
         <Pressable onPress={async () => {
           const id = await getDeviceId();
-          Clipboard.setString(id);
+          await Clipboard.setStringAsync(id);
           Alert.alert("Твоят код", id, [{ text: "OK" }]);
         }} style={styles.codeBtn}>
           <MaterialCommunityIcons name="shield-key-outline" size={20} color={colors.onSurfaceTertiary} />
