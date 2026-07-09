@@ -375,7 +375,8 @@ try {
       setSaving(true);
       const endedAt = new Date().toISOString();
       try {
-        const id = tripIdRef.current ?? (await api.createTrip()).id;
+   const deviceId = await getDeviceId();
+        const id = tripIdRef.current ?? (await api.createTrip(undefined, deviceId)).id;
         await api.updateTrip(id, {
           ended_at: endedAt,
           route: finalRoute,
