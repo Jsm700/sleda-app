@@ -6,9 +6,10 @@ import {
   Pressable,
   FlatList,
   ActivityIndicator,
-RefreshControl,
+  RefreshControl,
   Alert,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -17,7 +18,6 @@ import { useTranslation } from "@/src/i18n";
 import { colors, spacing, radius } from "@/src/theme/colors";
 import { api, type ApiTrip } from "@/src/api/client";
 import { getDeviceId } from "@/src/utils/deviceId";
-import * as Clipboard from "expo-clipboard";
 import { formatDateTime, formatDistance, formatDuration } from "@/src/utils/format";
 
 export default function ArchiveScreen() {
