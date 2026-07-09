@@ -26,7 +26,7 @@ export default function DeviceIdModal() {
   }, []);
 
   const handleCopy = () => {
-    Clipboard.setString(code);
+    await Clipboard.setStringAsync(code);
     setCopied(true);
   };
 
