@@ -6,9 +6,7 @@ import {
   Pressable,
   FlatList,
   ActivityIndicator,
-  RefreshControl,
-  RefreshControl,
-  Alert,
+ RefreshControl,
   Alert,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
