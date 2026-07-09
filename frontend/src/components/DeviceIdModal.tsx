@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Modal, View, Text, Pressable, StyleSheet, Clipboard, TextInput } from "react-native";
+import { Modal, View, Text, Pressable, StyleSheet, TextInput } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getDeviceId, setDeviceId } from "@/src/utils/deviceId";
 import { colors, spacing, radius } from "@/src/theme/colors";
