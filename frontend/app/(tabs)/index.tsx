@@ -564,7 +564,7 @@ try {
             </View>
           )}
 
-          <View style={styles.langFloating} pointerEvents="box-none">
+          <View style={[styles.langFloating, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
             <Pressable
               onPress={() => setLang(lang === "bg" ? "en" : "bg")}
               style={styles.langPill}
