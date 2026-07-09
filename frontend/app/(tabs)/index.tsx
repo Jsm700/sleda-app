@@ -842,7 +842,7 @@ const styles = StyleSheet.create({
   },
   recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#fff" },
   recordingText: { color: "#fff", fontSize: 12, fontWeight: "800", letterSpacing: 0.6 },
-  langFloating: { position: "absolute", top: spacing.sm, right: spacing.md },
+ langFloating: { position: "absolute", top: 0, right: spacing.md },
   langPill: {
     flexDirection: "row",
     alignItems: "center",
