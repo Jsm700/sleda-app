@@ -219,6 +219,18 @@ export default function TripDetailScreen() {
           </View>
         </View>
       )}
+   <Modal visible={!!selectedMarker} transparent animationType="fade" onRequestClose={() => setSelectedMarker(null)}>
+        <Pressable style={styles.photoBackdrop} onPress={() => setSelectedMarker(null)}>
+          <View style={styles.photoViewer}>
+            {selectedMarker?.photo && (
+              <Image source={{ uri: `data:image/jpeg;base64,${selectedMarker.photo}` }} style={styles.photoFull} resizeMode="contain" />
+            )}
+            {selectedMarker?.note && (
+              <Text style={styles.photoNote}>{selectedMarker.note}</Text>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
