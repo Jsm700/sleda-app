@@ -49,6 +49,7 @@ export default function TripDetailScreen() {
   const { t, lang } = useTranslation();
 
   const [trip, setTrip] = useState<ApiTrip | null>(null);
+  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
