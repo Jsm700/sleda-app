@@ -563,17 +563,7 @@ try {
               <Text style={styles.recordingText}>{t("tracking")}</Text>
             </View>
           )}
-
-          <View style={[styles.langFloating, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
-            <Pressable
-              onPress={() => setLang(lang === "bg" ? "en" : "bg")}
-              style={styles.langPill}
-              testID="lang-toggle"
-            >
-              <MaterialCommunityIcons name="translate" size={16} color={colors.onSurface} />
-              <Text style={styles.langPillText}>{lang === "bg" ? "\u0411\u0413" : "EN"}</Text>
-            </Pressable>
-          </View>
+  
         </SafeAreaView>
 
         {!currentLocation && permissionStatus === "granted" && (
