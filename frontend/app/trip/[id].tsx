@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, Modal, Image, ScrollView } from "react-native";
+import type { MapMarker } from "@/src/components/MapCanvas.types";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
