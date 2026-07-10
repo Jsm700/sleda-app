@@ -283,4 +283,8 @@ const styles = StyleSheet.create({
   },
   statLabel: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4 },
   statValue: { color: colors.onSurface, fontSize: 18, fontWeight: "900", marginTop: 2 },
+  photoBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
+  photoViewer: { width: "100%", alignItems: "center", gap: spacing.md, padding: spacing.lg },
+  photoFull: { width: "100%", height: 400, borderRadius: radius.md },
+  photoNote: { color: colors.onSurface, fontSize: 16, fontWeight: "700", textAlign: "center" },
 });
