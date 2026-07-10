@@ -554,7 +554,15 @@ try {
               <Text style={styles.statusValue} testID="status-markers">
                 {markers.length}
               </Text>
-            </View>
+            </View> 
+            <Pressable
+              onPress={() => setLang(lang === "bg" ? "en" : "bg")}
+              style={styles.statusCard}
+              testID="lang-toggle"
+            >
+              <MaterialCommunityIcons name="translate" size={16} color={colors.onSurfaceTertiary} />
+              <Text style={styles.statusValue}>{lang === "bg" ? "БГ" : "EN"}</Text>
+            </Pressable>
           </View>
 
           {isTracking && (
