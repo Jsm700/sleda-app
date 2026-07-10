@@ -536,7 +536,7 @@ try {
         />
 
         <SafeAreaView edges={["top"]} style={styles.topOverlay} pointerEvents="box-none">
-          <View style={styles.statusRow} pointerEvents="none">
+          <View style={styles.statusRow}>
             <View style={styles.statusCard}>
               <Text style={styles.statusLabel}>{t("distance")}</Text>
               <Text style={styles.statusValue} testID="status-distance">
