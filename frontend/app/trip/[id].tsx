@@ -179,7 +179,7 @@ export default function TripDetailScreen() {
             </Pressable>
           </View>
         ) : (
-          <MapCanvas
+       <MapCanvas
             ref={undefined as unknown as React.Ref<MapCanvasHandle>}
             initialRegion={initialRegion}
             route={routePoints}
@@ -187,7 +187,8 @@ export default function TripDetailScreen() {
             brandColor={colors.brand}
             markerColorFor={(type) => MARKER_COLORS[type]}
             markerLabelFor={(type) => labels[type]}
-          />
+            onMarkerPress={(m) => { if (m.photo || m.note) setSelectedMarker(m); }}
+          />   
         )}
       </View>
 
