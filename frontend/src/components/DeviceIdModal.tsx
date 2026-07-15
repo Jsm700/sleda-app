@@ -7,23 +7,40 @@ import { colors, spacing, radius } from "@/src/theme/colors";
 
 const SHOWN_KEY = "sleda.device_id_shown";
 
-export default function DeviceIdModal() {
-  const [visible, setVisible] = useState(false);
+type Props = {
+  forceVisible?: boolean;
+  onClose?: () => void;
+};
+
+export default function DeviceIdModal({ forceVisible, onClose }: Props) {
+  const [autoVisible, setAutoVisible] = useState(false);
   const [code, setCode] = useState("");
   const [copied, setCopied] = useState(false);
   const [mode, setMode] = useState<"show" | "restore">("show");
   const [inputCode, setInputCode] = useState("");
   const [restoreError, setRestoreError] = useState(false);
 
+  const visible = forceVisible || autoVisible;
+
   useEffect(() => {
     (async () => {
-      const shown = await AsyncStorage.getItem(SHOWN_KEY);
-      if (shown) return;
       const id = await getDeviceId();
       setCode(id);
-      setVisible(true);
+      if (forceVisible) return;
+      const shown = await AsyncStorage.getItem(SHOWN_KEY);
+      if (shown) return;
+      setAutoVisible(true);
     })();
-  }, []);
+  }, [forceVisible]);
+
+  useEffect(() => {
+    if (forceVisible) {
+      setMode("show");
+      setCopied(false);
+      setInputCode("");
+      setRestoreError(false);
+    }
+  }, [forceVisible]);
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(code);
@@ -32,7 +49,8 @@ export default function DeviceIdModal() {
 
   const handleClose = async () => {
     await AsyncStorage.setItem(SHOWN_KEY, "1");
-    setVisible(false);
+    setAutoVisible(false);
+    onClose?.();
   };
 
   const handleRestore = async () => {
@@ -43,11 +61,12 @@ export default function DeviceIdModal() {
     }
     await setDeviceId(trimmed);
     await AsyncStorage.setItem(SHOWN_KEY, "1");
-    setVisible(false);
+    setAutoVisible(false);
+    onClose?.();
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
           {mode === "show" ? (
