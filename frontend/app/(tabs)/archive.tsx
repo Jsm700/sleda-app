@@ -18,6 +18,7 @@ import { useTranslation } from "@/src/i18n";
 import { colors, spacing, radius } from "@/src/theme/colors";
 import { api, type ApiTrip } from "@/src/api/client";
 import { getDeviceId } from "@/src/utils/deviceId";
+import DeviceIdModal from "@/src/components/DeviceIdModal";
 import { formatDateTime, formatDistance, formatDuration } from "@/src/utils/format";
 
 export default function ArchiveScreen() {
@@ -27,6 +28,7 @@ export default function ArchiveScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [codeModalOpen, setCodeModalOpen] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
