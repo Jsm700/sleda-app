@@ -89,11 +89,7 @@ export default function ArchiveScreen() {
       <StatusBar style="light" />
       <View style={styles.header}>
         <Text style={styles.title}>{t("archive")}</Text>
-        <Pressable onPress={async () => {
-          const id = await getDeviceId();
-          await Clipboard.setStringAsync(id);
-          Alert.alert("Твоят код", id, [{ text: "OK" }]);
-        }} style={styles.codeBtn}>
+        <Pressable onPress={() => setCodeModalOpen(true)} style={styles.codeBtn}>
           <MaterialCommunityIcons name="shield-key-outline" size={20} color={colors.onSurfaceTertiary} />
         </Pressable>
         <View style={styles.langSwitcher}>
