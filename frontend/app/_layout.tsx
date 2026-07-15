@@ -41,11 +41,12 @@ export default function RootLayout() {
 
   if (!loaded && !error) return null;
 
-  return (
+ return (
     <>
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <GpxIntentHandler />
+      </Stack>
       <DeviceIdModal />
-      <GpxIntentHandler />
     </>
   );
 }
