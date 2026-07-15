@@ -95,6 +95,7 @@ function formatDistance(m: number): string {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { t, lang, setLang } = useTranslation();
+  const router = useRouter();
   const mapRef = useRef<MapCanvasHandle>(null);
   const startTimeRef = useRef<number | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
