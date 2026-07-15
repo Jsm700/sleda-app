@@ -246,6 +246,20 @@ export default function HomeScreen() {
     }
   }, [refreshFromStorage, startPolling, checkPendingTrip]);
 
+ useEffect(() => {
+    const handleUrl = (event: { url: string }) => {
+      if (event.url && (event.url.endsWith(".gpx") || event.url.includes("gpx"))) {
+        router.push({ pathname: "/gpx-import", params: { url: event.url } });
+      }
+    };
+    const sub = Linking.addEventListener("url", handleUrl);
+    Linking.getInitialURL().then((url) => {
+      if (url && (url.endsWith(".gpx") || url.includes("gpx"))) {
+        router.push({ pathname: "/gpx-import", params: { url } });
+      }
+    });
+    return () => sub.remove();
+  }, [router]);
   useEffect(() => {
     initLocation();
     recoverActiveTrip();
