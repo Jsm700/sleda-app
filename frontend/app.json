@@ -26,6 +26,27 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.jsm700.sleda",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "content",
+              "mimeType": "application/gpx+xml"
+            },
+            {
+              "scheme": "file",
+              "mimeType": "application/gpx+xml"
+            },
+            {
+              "scheme": "content",
+              "mimeType": "*/*",
+              "pathPattern": ".*\\.gpx"
+            }
+          ],
+          "category": ["DEFAULT", "BROWSABLE"]
+        }
+      ],
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyC_-0kdEZzukX-4QuM3p9OD5pr3KYr9CjE"
