@@ -7,9 +7,7 @@ import {
   FlatList,
   ActivityIndicator,
  RefreshControl,
-  Alert,
-} from "react-native";
-import * as Clipboard from "expo-clipboard";
+  } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
