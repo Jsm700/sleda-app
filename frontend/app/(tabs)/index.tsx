@@ -29,6 +29,7 @@ import type {
 } from "@/src/components/MapCanvas.types";
 import { colors, spacing, radius } from "@/src/theme/colors";
 import { useTranslation, type TranslationKey } from "@/src/i18n";
+import { useRouter } from "expo-router";
 import { api } from "@/src/api/client";
 import {
   savePendingTrip,
