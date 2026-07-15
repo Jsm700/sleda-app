@@ -3,9 +3,7 @@ import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from "rea
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import * as IntentLauncher from "expo-intent-launcher";
-import { useIntentUrl } from "expo-linking";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
 import MapCanvas from "@/src/components/MapCanvas";
 import { parseGpx } from "@/src/utils/gpxParser";
@@ -17,7 +15,7 @@ import type { RoutePoint } from "@/src/components/MapCanvas.types";
 export default function GpxImportScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const url = useIntentUrl();
+  const { url } = useLocalSearchParams<{ url: string }>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +23,11 @@ export default function GpxImportScreen() {
   const [route, setRoute] = useState<RoutePoint[]>([]);
 
   useEffect(() => {
-    if (!url) return;
+    if (!url) {
+      setError("Няма файл за зареждане.");
+      setLoading(false);
+      return;
+    }
     (async () => {
       try {
         const xml = await FileSystem.readAsStringAsync(url);
