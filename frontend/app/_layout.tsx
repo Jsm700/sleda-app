@@ -1,22 +1,17 @@
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-
+import { useRouter } from "expo-router";
+import * as Linking from "expo-linking";
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
-
-// Register the background location task at module import time (before any
-// screen mounts) - required by expo-task-manager.
 import "@/src/tracking/locationTask";
 import DeviceIdModal from "@/src/components/DeviceIdModal";
 
-// Keep the native splash visible from cold start until icon fonts register.
-// Required because @expo/vector-icons' componentDidMount fallback fires
-// Font.loadAsync against a broken vendor path if any <Icon> mounts before
-// the family is registered — which throws on Android Expo Go.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [loaded, error] = useIconFonts();
+  const router = useRouter();
 
   useEffect(() => {
     if (loaded || error) {
@@ -24,14 +19,27 @@ export default function RootLayout() {
     }
   }, [loaded, error]);
 
-  // If the CDN is unreachable we fall through on error rather than wedging
-  // the app — icons will tofu, but the app still boots.
+  useEffect(() => {
+    const handleUrl = (event: { url: string }) => {
+      if (event.url && (event.url.endsWith(".gpx") || event.url.includes("gpx"))) {
+        router.push({ pathname: "/gpx-import", params: { url: event.url } });
+      }
+    };
+    const sub = Linking.addEventListener("url", handleUrl);
+    Linking.getInitialURL().then((url) => {
+      if (url && (url.endsWith(".gpx") || url.includes("gpx"))) {
+        router.push({ pathname: "/gpx-import", params: { url } });
+      }
+    });
+    return () => sub.remove();
+  }, [router]);
+
   if (!loaded && !error) return null;
 
- return (
+  return (
     <>
       <Stack screenOptions={{ headerShown: false }} />
       <DeviceIdModal />
     </>
-  ); 
+  );
 }
