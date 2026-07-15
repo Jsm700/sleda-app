@@ -9,15 +9,8 @@ import DeviceIdModal from "@/src/components/DeviceIdModal";
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const [loaded, error] = useIconFonts();
+function GpxIntentHandler() {
   const router = useRouter();
-
-  useEffect(() => {
-    if (loaded || error) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded, error]);
 
   useEffect(() => {
     const handleUrl = (event: { url: string }) => {
@@ -34,12 +27,25 @@ export default function RootLayout() {
     return () => sub.remove();
   }, [router]);
 
+  return null;
+}
+
+export default function RootLayout() {
+  const [loaded, error] = useIconFonts();
+
+  useEffect(() => {
+    if (loaded || error) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded, error]);
+
   if (!loaded && !error) return null;
 
   return (
     <>
       <Stack screenOptions={{ headerShown: false }} />
       <DeviceIdModal />
+      <GpxIntentHandler />
     </>
   );
 }
