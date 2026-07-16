@@ -1,24 +1,20 @@
 import { useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Linking from "expo-linking";
 import { colors } from "@/src/theme/colors";
 
 export default function UnmatchedRoute() {
   const router = useRouter();
-  const params = useLocalSearchParams();
 
   useEffect(() => {
-    const url = typeof params.unmatched === "string"
-      ? params.unmatched
-      : Array.isArray(params.unmatched)
-      ? params.unmatched.join("/")
-      : "";
-
-    if (url) {
-      router.replace({ pathname: "/gpx-import", params: { url: `content://${url}` } });
-    } else {
-      router.replace("/(tabs)");
-    }
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        router.replace({ pathname: "/gpx-import", params: { url } });
+      } else {
+        router.replace("/(tabs)");
+      }
+    });
   }, []);
 
   return (
