@@ -30,7 +30,14 @@ export default function GpxImportScreen() {
     }
     (async () => {
       try {
-        const xml = await FileSystem.readAsStringAsync(url);
+        let xml: string;
+        if (url.startsWith("content://")) {
+          const destUri = FileSystem.cacheDirectory + "imported.gpx";
+          await FileSystem.StorageAccessFramework.copyAsync({ from: url, to: destUri });
+          xml = await FileSystem.readAsStringAsync(destUri);
+        } else {
+          xml = await FileSystem.readAsStringAsync(url);
+        }
         const parsed = parseGpx(xml);
         setName(parsed.name);
         setRoute(parsed.route.map((p, i) => ({
