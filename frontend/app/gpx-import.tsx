@@ -45,10 +45,10 @@ export default function GpxImportScreen() {
           timestamp: new Date(p.timestamp).getTime() || i,
         })));
       } catch (e) {
-        } catch (e) {
-  console.log("GPX import error:", e);
-  setError(`Грешка: ${e instanceof Error ? e.message : String(e)}`);
-} finally {
+        console.log("GPX import error:", e);
+        setError(`Грешка: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setLoading(false);
       }
     })();
   }, [url]);
