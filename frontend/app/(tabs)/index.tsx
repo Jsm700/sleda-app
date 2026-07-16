@@ -29,7 +29,7 @@ import type {
 } from "@/src/components/MapCanvas.types";
 import { colors, spacing, radius } from "@/src/theme/colors";
 import { useTranslation, type TranslationKey } from "@/src/i18n";
-import { useRouter, useRootNavigationState } from "expo-router";
+import { useRouter } from "expo-router";
 import { api } from "@/src/api/client";
 import {
   savePendingTrip,
@@ -248,26 +248,15 @@ export default function HomeScreen() {
     }
   }, [refreshFromStorage, startPolling, checkPendingTrip]);
 
- const navState = useRootNavigationState();
-
 useEffect(() => {
     const handleUrl = (event: { url: string }) => {
-      if (event.url && (event.url.endsWith(".gpx") || event.url.includes("gpx"))) {
+      if (event.url && (event.url.startsWith("content://") || event.url.startsWith("file://") || event.url.includes(".gpx"))) {
         router.push({ pathname: "/gpx-import", params: { url: event.url } });
       }
     };
     const sub = Linking.addEventListener("url", handleUrl);
     return () => sub.remove();
   }, [router]);
-
-  useEffect(() => {
-    if (!navState?.key) return;
-    Linking.getInitialURL().then((url) => {
-      if (url && (url.endsWith(".gpx") || url.includes("gpx"))) {
-        router.push({ pathname: "/gpx-import", params: { url } });
-      }
-    });
-  }, [navState?.key, router]);
   useEffect(() => {
     initLocation();
     recoverActiveTrip();
