@@ -32,9 +32,8 @@ export default function GpxImportScreen() {
       try {
         let xml: string;
         if (url.startsWith("content://")) {
-          const destUri = FileSystem.cacheDirectory + "imported.gpx";
-       await FileSystem.copyAsync({ from: url, to: destUri });  
-          xml = await FileSystem.readAsStringAsync(destUri);
+          const response = await fetch(url);
+          xml = await response.text();
         } else {
           xml = await FileSystem.readAsStringAsync(url);
         }
