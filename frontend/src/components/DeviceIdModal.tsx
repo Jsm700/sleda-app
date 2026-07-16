@@ -20,7 +20,7 @@ export default function DeviceIdModal({ forceVisible, onClose }: Props) {
   const [mode, setMode] = useState<"show" | "restore">("show");
   const [inputCode, setInputCode] = useState("");
   const [restoreError, setRestoreError] = useState(false);
-
+  const router = useRouter();
   const visible = forceVisible || autoVisible;
 
   useEffect(() => {
