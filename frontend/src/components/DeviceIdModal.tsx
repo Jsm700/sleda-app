@@ -3,6 +3,7 @@ import { Modal, View, Text, Pressable, StyleSheet, TextInput } from "react-nativ
 import * as Clipboard from "expo-clipboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getDeviceId, setDeviceId } from "@/src/utils/deviceId";
+import { useRouter } from "expo-router";
 import { colors, spacing, radius } from "@/src/theme/colors";
 
 const SHOWN_KEY = "sleda.device_id_shown";
