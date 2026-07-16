@@ -52,6 +52,7 @@ export default function DeviceIdModal({ forceVisible, onClose }: Props) {
     await AsyncStorage.setItem(SHOWN_KEY, "1");
     setAutoVisible(false);
     onClose?.();
+    router.replace("/(tabs)/archive");
   };
 
   const handleRestore = async () => {
