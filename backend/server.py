@@ -50,6 +50,7 @@ class RoutePoint(BaseModel):
 class Trip(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: Optional[str] = None
+    description: Optional[str] = None
     device_id: Optional[str] = None
     started_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     ended_at: Optional[str] = None
@@ -61,11 +62,13 @@ class Trip(BaseModel):
 
 class TripCreate(BaseModel):
     name: Optional[str] = None
+    description: Optional[str] = None
     device_id: Optional[str] = None
 
 
 class TripUpdate(BaseModel):
     name: Optional[str] = None
+    description: Optional[str] = None
     ended_at: Optional[str] = None
     route: Optional[List[RoutePoint]] = None
     markers: Optional[List[Marker]] = None
@@ -138,7 +141,7 @@ async def list_photos(device_id: Optional[str] = None):
 
 @api_router.post("/trips", response_model=Trip)
 async def create_trip(payload: TripCreate):
-    trip = Trip(name=payload.name, device_id=payload.device_id)
+    trip = Trip(name=payload.name, description=payload.description, device_id=payload.device_id)
     await db.trips.insert_one(trip.model_dump())
     return trip
 

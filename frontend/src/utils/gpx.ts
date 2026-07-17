@@ -34,6 +34,7 @@ export function buildGpx(trip: ApiTrip): string {
 <gpx version="1.1" creator="Sleda" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>${esc(trip.name ?? "Sleda trip")}</name>
+      ${trip.description ? `<desc>${esc(trip.description)}</desc>` : ""}
     <time>${isoTime(trip.started_at)}</time>
   </metadata>
 `;

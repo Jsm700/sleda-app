@@ -24,6 +24,7 @@ export type ApiRoutePoint = {
 export type ApiTrip = {
   id: string;
   name?: string | null;
+  description?: string | null;
   started_at: string;
   ended_at?: string | null;
   route: ApiRoutePoint[];
@@ -48,10 +49,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   listTrips: (device_id?: string) => request<ApiTrip[]>(`/trips${device_id ? `?device_id=${device_id}` : ""}`),
   getTrip: (id: string) => request<ApiTrip>(`/trips/${id}`),
-  createTrip: (name?: string, device_id?: string) =>
+  createTrip: (name?: string, device_id?: string, description?: string) =>
     request<ApiTrip>("/trips", {
       method: "POST",
-      body: JSON.stringify({ name: name ?? null, device_id: device_id ?? null }),
+      body: JSON.stringify({ name: name ?? null, device_id: device_id ?? null, description: description ?? null }),
     }),
   updateTrip: (id: string, patch: Partial<ApiTrip>) =>
     request<ApiTrip>(`/trips/${id}`, {

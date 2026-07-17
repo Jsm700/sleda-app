@@ -101,6 +101,7 @@ export default function HomeScreen() {
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tripIdRef = useRef<string | null>(null);
+  const pendingSaveRef = useRef<{ route: any[]; markers: any[]; distance: number; duration: number; endedAt: string } | null>(null);
   const markersRef = useRef<MapMarker[]>([]);
 
   const [permissionStatus, setPermissionStatus] = useState<Location.PermissionStatus | null>(null);
@@ -118,6 +119,9 @@ export default function HomeScreen() {
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [notePhoto, setNotePhoto] = useState<string | null>(null);
+  const [stopModalOpen, setStopModalOpen] = useState(false);
+  const [stopName, setStopName] = useState("");
+  const [stopDescription, setStopDescription] = useState("");
   const [noteCoords, setNoteCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const safeHaptic = useCallback((fn: () => Promise<void> | void) => {
@@ -384,43 +388,65 @@ try {
       setRoute(finalPoints);
       setDistance(finalDistance);
 
-      setSaving(true);
-      const endedAt = new Date().toISOString();
-      try {
-   const deviceId = await getDeviceId();
-        const id = tripIdRef.current ?? (await api.createTrip(undefined, deviceId)).id;
-        await api.updateTrip(id, {
-          ended_at: endedAt,
-          route: finalRoute,
-          markers: finalMarkers,
-          distance_m: finalDistance,
-          duration_s: finalDurationS,
-        });
-        await clearPendingTrip();
-        Alert.alert(t("tripSavedTitle"), t("tripSavedBody"));
-      } catch (e) {
-        console.warn("save trip failed, storing locally", e);
-        await savePendingTrip({
-          tripId: tripIdRef.current,
-          startedAt: new Date(startTimeRef.current ?? Date.now()).toISOString(),
-          endedAt,
-          route: finalRoute,
-          markers: finalMarkers,
-          distance_m: finalDistance,
-          duration_s: finalDurationS,
-        });
-        Alert.alert(
-          t("saveError"),
-          "\u041c\u0430\u0440\u0448\u0440\u0443\u0442\u044a\u0442 \u0435 \u0437\u0430\u043f\u0430\u0437\u0435\u043d \u043b\u043e\u043a\u0430\u043b\u043d\u043e \u0438 \u0449\u0435 \u0431\u044a\u0434\u0435 \u043a\u0430\u0447\u0435\u043d \u043f\u0440\u0438 \u0441\u043b\u0435\u0434\u0432\u0430\u0449\u043e \u043e\u0442\u0432\u0430\u0440\u044f\u043d\u0435.",
-        );
-      } finally {
-        setSaving(false);
-        await clearStoredRoute();
-        tripIdRef.current = null;
-        startTimeRef.current = null;
-      }
+      pendingSaveRef.current = {
+        route: finalRoute,
+        markers: finalMarkers,
+        distance: finalDistance,
+        duration: finalDurationS,
+        endedAt: new Date().toISOString(),
+      };
+      const defaultName = `Маршрут · ${new Date().toLocaleDateString("bg-BG")}`;
+      setStopName(defaultName);
+      setStopDescription("");
+      setStopModalOpen(true);
     }
   }, [isTracking, permissionStatus, initLocation, t, safeHaptic, elapsed, startPolling, stopPolling]);
+
+  const confirmStopSave = useCallback(async () => {
+    const pending = pendingSaveRef.current;
+    if (!pending) {
+      setStopModalOpen(false);
+      return;
+    }
+    setStopModalOpen(false);
+    setSaving(true);
+    try {
+      const deviceId = await getDeviceId();
+      const id = tripIdRef.current ?? (await api.createTrip(undefined, deviceId)).id;
+      await api.updateTrip(id, {
+        name: stopName || undefined,
+        description: stopDescription || undefined,
+        ended_at: pending.endedAt,
+        route: pending.route,
+        markers: pending.markers,
+        distance_m: pending.distance,
+        duration_s: pending.duration,
+      });
+      await clearPendingTrip();
+      Alert.alert(t("tripSavedTitle"), t("tripSavedBody"));
+    } catch (e) {
+      console.warn("save trip failed, storing locally", e);
+      await savePendingTrip({
+        tripId: tripIdRef.current,
+        startedAt: new Date(startTimeRef.current ?? Date.now()).toISOString(),
+        endedAt: pending.endedAt,
+        route: pending.route,
+        markers: pending.markers,
+        distance_m: pending.distance,
+        duration_s: pending.duration,
+      });
+      Alert.alert(
+        t("saveError"),
+        "\u041c\u0430\u0440\u0448\u0440\u0443\u0442\u044a\u0442 \u0435 \u0437\u0430\u043f\u0430\u0437\u0435\u043d \u043b\u043e\u043a\u0430\u043b\u043d\u043e \u0438 \u0449\u0435 \u0431\u044a\u0434\u0435 \u043a\u0430\u0447\u0435\u043d \u043f\u0440\u0438 \u0441\u043b\u0435\u0434\u0432\u0430\u0449\u043e \u043e\u0442\u0432\u0430\u0440\u044f\u043d\u0435.",
+      );
+    } finally {
+      setSaving(false);
+      await clearStoredRoute();
+      tripIdRef.current = null;
+      startTimeRef.current = null;
+      pendingSaveRef.current = null;
+    }
+  }, [stopName, stopDescription, t]);
 
   const handleDropMarker = useCallback(
     (type: MarkerType) => {
@@ -702,6 +728,43 @@ try {
           </View>
         </View>
       </Modal>
+      <Modal
+        visible={stopModalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalRoot}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Записване на маршрут</Text>
+            </View>
+            <View style={{ gap: spacing.xs }}>
+              <Text style={styles.stopFieldLabel}>Име</Text>
+              <TextInput
+                style={styles.stopInput}
+                value={stopName}
+                onChangeText={setStopName}
+                placeholder="Име на маршрута"
+                placeholderTextColor={colors.onSurfaceTertiary}
+              />
+              <Text style={styles.stopFieldLabel}>Описание (незадължително)</Text>
+              <TextInput
+                style={[styles.stopInput, styles.stopInputMultiline]}
+                value={stopDescription}
+                onChangeText={setStopDescription}
+                placeholder="напр. Гъби в Родопите - около Рожен"
+                placeholderTextColor={colors.onSurfaceTertiary}
+                multiline
+                numberOfLines={3}
+              />
+              <Pressable style={styles.stopSaveBtn} onPress={confirmStopSave}>
+                <Text style={styles.stopSaveBtnText}>Запази</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={!!selectedMarker}
@@ -956,6 +1019,26 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   modalTitle: { color: colors.onSurface, fontSize: 20, fontWeight: "900" },
   modalClose: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  stopFieldLabel: { color: colors.onSurfaceTertiary, fontSize: 13, fontWeight: "700" },
+  stopInput: {
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    color: colors.onSurface,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    fontSize: 15,
+  },
+  stopInputMultiline: { minHeight: 70, textAlignVertical: "top" },
+  stopSaveBtn: {
+    backgroundColor: colors.brand,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    alignItems: "center",
+    marginTop: spacing.xs,
+  },
+  stopSaveBtnText: { color: "#fff", fontSize: 16, fontWeight: "900" },
   noteInput: {
     backgroundColor: colors.surfaceSecondary,
     color: colors.onSurface,

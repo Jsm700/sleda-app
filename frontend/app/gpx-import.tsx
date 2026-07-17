@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, TextInput } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -20,6 +20,7 @@ export default function GpxImportScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("Импортиран маршрут");
+  const [description, setDescription] = useState("");
   const [route, setRoute] = useState<RoutePoint[]>([]);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function GpxImportScreen() {
         }
         const parsed = parseGpx(xml);
         setName(parsed.name);
+        setDescription(parsed.description ?? "");
         setRoute(parsed.route.map((p, i) => ({
           latitude: p.latitude,
           longitude: p.longitude,
@@ -57,7 +59,7 @@ export default function GpxImportScreen() {
     setSaving(true);
     try {
       const deviceId = await getDeviceId();
-      const trip = await api.createTrip(name, deviceId);
+      const trip = await api.createTrip(name, deviceId, description || undefined);
       await api.updateTrip(trip.id, {
         ended_at: new Date().toISOString(),
         route: route.map((p) => ({
@@ -104,15 +106,37 @@ export default function GpxImportScreen() {
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : (
-        <MapCanvas
-          ref={null as any}
-          initialRegion={initialRegion}
-          route={route}
-          markers={[]}
-          brandColor={colors.brand}
-          markerColorFor={() => colors.brand}
-          markerLabelFor={() => ""}
-        />
+        <>
+          <MapCanvas
+            ref={null as any}
+            initialRegion={initialRegion}
+            route={route}
+            markers={[]}
+            brandColor={colors.brand}
+            markerColorFor={() => colors.brand}
+            markerLabelFor={() => ""}
+          />
+          <View style={styles.fields}>
+            <Text style={styles.fieldLabel}>Име</Text>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="Име на маршрута"
+              placeholderTextColor={colors.onSurfaceTertiary}
+            />
+            <Text style={styles.fieldLabel}>Описание (незадължително)</Text>
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="напр. Гъби в Родопите - около Рожен"
+              placeholderTextColor={colors.onSurfaceTertiary}
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+        </>
       )}
 
       {!loading && !error && (
@@ -148,6 +172,25 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.sm },
   subtle: { color: colors.onSurfaceTertiary, fontSize: 14 },
   errorText: { color: colors.error, fontSize: 15, fontWeight: "700", textAlign: "center" },
+  fields: {
+    padding: spacing.md,
+    gap: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  fieldLabel: { color: colors.onSurfaceTertiary, fontSize: 13, fontWeight: "700", marginTop: spacing.xs },
+  input: {
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    color: colors.onSurface,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    fontSize: 15,
+  },
+  inputMultiline: { minHeight: 70, textAlignVertical: "top" },
   bottom: {
     backgroundColor: colors.surface,
     padding: spacing.md,

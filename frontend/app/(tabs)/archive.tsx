@@ -61,10 +61,22 @@ export default function ArchiveScreen() {
     >
       <View style={styles.cardHeader}>
         <MaterialCommunityIcons name="map-marker-path" size={22} color={colors.brand} />
-        <Text style={styles.cardDate} numberOfLines={1}>
-          {formatDateTime(item.started_at, lang)}
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.cardName} numberOfLines={1}>
+            {item.name || formatDateTime(item.started_at, lang)}
+          </Text>
+          {item.name ? (
+            <Text style={styles.cardDate} numberOfLines={1}>
+              {formatDateTime(item.started_at, lang)}
+            </Text>
+          ) : null}
+        </View>
       </View>
+      {item.description ? (
+        <Text style={styles.cardDescription} numberOfLines={2}>
+          {item.description}
+        </Text>
+      ) : null}
       <View style={styles.cardStats}>
         <View style={styles.statBlock}>
           <Text style={styles.statLabel}>{t("distance")}</Text>
@@ -200,7 +212,9 @@ const styles = StyleSheet.create({
   },
   cardPressed: { backgroundColor: colors.surfaceTertiary },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  cardDate: { color: colors.onSurface, fontSize: 15, fontWeight: "800", flex: 1 },
+  cardName: { color: colors.onSurface, fontSize: 16, fontWeight: "800" },
+  cardDate: { color: colors.onSurfaceTertiary, fontSize: 13, fontWeight: "600", marginTop: 2 },
+  cardDescription: { color: colors.onSurfaceTertiary, fontSize: 13, lineHeight: 18 },
   cardStats: { flexDirection: "row", gap: spacing.sm },
   statBlock: {
     flex: 1,

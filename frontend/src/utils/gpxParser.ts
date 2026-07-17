@@ -15,6 +15,7 @@ export type GpxWaypoint = {
 
 export type ParsedGpx = {
   name: string;
+  description?: string;
   route: GpxPoint[];
   waypoints: GpxWaypoint[];
 };
@@ -36,6 +37,7 @@ function all(xml: string, tag: string): string[] {
 
 export function parseGpx(xml: string): ParsedGpx {
   const name = inner(xml, "name") || "Импортиран маршрут";
+  const description = inner(xml, "desc") || undefined;
 
   const trkpts = all(xml, "trkpt");
   const route: GpxPoint[] = trkpts.map((pt) => ({
@@ -52,5 +54,5 @@ export function parseGpx(xml: string): ParsedGpx {
     desc: inner(wpt, "desc") || undefined,
   })).filter((p) => !isNaN(p.latitude) && !isNaN(p.longitude));
 
-  return { name, route, waypoints };
+  return { name, description, route, waypoints };
 }
