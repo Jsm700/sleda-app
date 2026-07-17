@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   cardName: { color: colors.onSurface, fontSize: 16, fontWeight: "800" },
   cardDate: { color: colors.onSurfaceTertiary, fontSize: 13, fontWeight: "600", marginTop: 2 },
-  cardDescription: { color: colors.onSurfaceTertiary, fontSize: 13, lineHeight: 18 },
+  cardDescription: { color: colors.brand, fontSize: 13, fontWeight: "700", lineHeight: 18 },
   cardStats: { flexDirection: "row", gap: spacing.sm },
   statBlock: {
     flex: 1,
