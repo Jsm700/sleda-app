@@ -8,9 +8,21 @@ import * as FileSystem from "expo-file-system/legacy";
 import MapCanvas from "@/src/components/MapCanvas";
 import { parseGpx } from "@/src/utils/gpxParser";
 import { api } from "@/src/api/client";
+import type { MarkerType } from "@/src/api/client";
 import { getDeviceId } from "@/src/utils/deviceId";
 import { colors, spacing, radius } from "@/src/theme/colors";
-import type { RoutePoint } from "@/src/components/MapCanvas.types";
+import type { RoutePoint, MapMarker } from "@/src/components/MapCanvas.types";
+
+const VALID_MARKER_TYPES: MarkerType[] = ["car", "fish", "mushroom", "hazard", "water", "poi", "note"];
+const MARKER_COLORS: Record<MarkerType, string> = {
+  car: colors.markerCar,
+  fish: colors.markerFish,
+  mushroom: colors.markerMushroom,
+  hazard: colors.markerHazard,
+  water: colors.markerWater,
+  poi: colors.info,
+  note: colors.info,
+};
 
 export default function GpxImportScreen() {
   const router = useRouter();
@@ -22,6 +34,7 @@ export default function GpxImportScreen() {
   const [name, setName] = useState("Импортиран маршрут");
   const [description, setDescription] = useState("");
   const [route, setRoute] = useState<RoutePoint[]>([]);
+  const [markers, setMarkers] = useState<MapMarker[]>([]);
 
   useEffect(() => {
     if (!url) {
@@ -46,6 +59,20 @@ export default function GpxImportScreen() {
           longitude: p.longitude,
           timestamp: new Date(p.timestamp).getTime() || i,
         })));
+        setMarkers(parsed.waypoints.map((wp, i) => {
+          const type: MarkerType = (wp.sym && VALID_MARKER_TYPES.includes(wp.sym as MarkerType)
+            ? (wp.sym as MarkerType)
+            : "note");
+          return {
+            id: `import-${i}`,
+            type,
+            latitude: wp.latitude,
+            longitude: wp.longitude,
+            timestamp: Date.now() + i,
+            note: wp.desc ?? null,
+            photo: null,
+          };
+        }));
       } catch (e) {
         console.log("GPX import error:", e);
         setError(`Грешка: ${e instanceof Error ? e.message : String(e)}`);
@@ -67,7 +94,15 @@ export default function GpxImportScreen() {
           longitude: p.longitude,
           timestamp: new Date(p.timestamp).toISOString(),
         })),
-        markers: [],
+        markers: markers.map((m) => ({
+          id: m.id,
+          type: m.type,
+          latitude: m.latitude,
+          longitude: m.longitude,
+          note: m.note ?? null,
+          photo: m.photo ?? null,
+          timestamp: new Date(m.timestamp).toISOString(),
+        })),
         distance_m: 0,
         duration_s: 0,
       });
@@ -111,9 +146,9 @@ export default function GpxImportScreen() {
             ref={null as any}
             initialRegion={initialRegion}
             route={route}
-            markers={[]}
+            markers={markers}
             brandColor={colors.brand}
-            markerColorFor={() => colors.brand}
+            markerColorFor={(type) => MARKER_COLORS[type] ?? colors.brand}
             markerLabelFor={() => ""}
           />
           <View style={styles.fields}>

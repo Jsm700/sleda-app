@@ -11,6 +11,7 @@ export type GpxWaypoint = {
   longitude: number;
   name: string;
   desc?: string;
+  sym?: string;
 };
 
 export type ParsedGpx = {
@@ -52,6 +53,7 @@ export function parseGpx(xml: string): ParsedGpx {
     longitude: parseFloat(attr(wpt, "lon")),
     name: inner(wpt, "name") || "",
     desc: inner(wpt, "desc") || undefined,
+    sym: inner(wpt, "sym") || undefined,
   })).filter((p) => !isNaN(p.latitude) && !isNaN(p.longitude));
 
   return { name, description, route, waypoints };
