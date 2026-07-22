@@ -265,7 +265,11 @@ useEffect(() => {
     initLocation();
     recoverActiveTrip();
     const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") refreshFromStorage();
+      if (state === "active") {
+        isTrackingActive().then((active) => {
+          if (active) refreshFromStorage();
+        });
+      }
     });
     return () => {
       sub.remove();
