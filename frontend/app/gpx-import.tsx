@@ -13,6 +13,22 @@ import { getDeviceId } from "@/src/utils/deviceId";
 import { colors, spacing, radius } from "@/src/theme/colors";
 import type { RoutePoint, MapMarker } from "@/src/components/MapCanvas.types";
 
+function distanceM(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLon = toRad(b.longitude - a.longitude);
+  const lat1 = toRad(a.latitude);
+  const lat2 = toRad(b.latitude);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function computeTotalDistance(points: { latitude: number; longitude: number }[]): number {
+  let d = 0;
+  for (let i = 1; i < points.length; i++) d += distanceM(points[i - 1], points[i]);
+  return d;
+}
+
 const VALID_MARKER_TYPES: MarkerType[] = ["car", "fish", "mushroom", "hazard", "water", "poi", "note"];
 const MARKER_COLORS: Record<MarkerType, string> = {
   car: colors.markerCar,
@@ -104,8 +120,10 @@ export default function GpxImportScreen() {
           photo: m.photo ?? null,
           timestamp: new Date(m.timestamp).toISOString(),
         })),
-        distance_m: 0,
-        duration_s: 0,
+        distance_m: computeTotalDistance(route),
+        duration_s: route.length > 1
+          ? Math.max(0, Math.round((route[route.length - 1].timestamp - route[0].timestamp) / 1000))
+          : 0,
       });
       Alert.alert("Успешно!", "Маршрутът е запазен в архива.", [
         { text: "OK", onPress: () => router.replace("/(tabs)/archive") },
