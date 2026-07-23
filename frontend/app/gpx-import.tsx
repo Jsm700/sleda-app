@@ -68,7 +68,6 @@ export default function GpxImportScreen() {
           xml = await FileSystem.readAsStringAsync(url);
         }
         const parsed = parseGpx(xml);
-        Alert.alert("GPX_DEBUG", `waypoints: ${parsed.waypoints.length}\n${JSON.stringify(parsed.waypoints).slice(0, 500)}`);
         setName(parsed.name);
         setDescription(parsed.description ?? "");
         setRoute(parsed.route.map((p, i) => ({
