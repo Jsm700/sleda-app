@@ -10,6 +10,8 @@ from typing import List, Optional, Literal
 import uuid
 from datetime import datetime, timezone
 
+from r2_client import upload_base64_photo
+
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -32,13 +34,19 @@ class Marker(BaseModel):
     latitude: float
     longitude: float
     note: Optional[str] = None
-    photo: Optional[str] = None  # base64-encoded JPEG, no data URI prefix
+    photo: Optional[str] = None  # R2 URL after processing (was base64 JPEG on the wire)
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     @field_validator("id", mode="before")
     @classmethod
     def _fill_id(cls, v):
         return v if (isinstance(v, str) and v) else str(uuid.uuid4())
+
+
+def _resolve_marker_photo(marker: Marker) -> Marker:
+    if marker.photo and not marker.photo.startswith("http"):
+        marker.photo = upload_base64_photo(marker.photo)
+    return marker
 
 
 class RoutePoint(BaseModel):
@@ -163,10 +171,9 @@ async def get_trip(trip_id: str):
 @api_router.patch("/trips/{trip_id}", response_model=Trip)
 async def update_trip(trip_id: str, payload: TripUpdate):
     update = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if v is not None}
-    # Re-dump nested models fully so default_factory fields (id, timestamp)
-    # are included even if the client didn't send them.
     if payload.markers is not None:
-        update["markers"] = [m.model_dump() for m in payload.markers]
+        resolved_markers = [_resolve_marker_photo(m) for m in payload.markers]
+        update["markers"] = [m.model_dump() for m in resolved_markers]
     if payload.route is not None:
         update["route"] = [r.model_dump() for r in payload.route]
     if not update:
@@ -198,6 +205,7 @@ async def add_marker(trip_id: str, marker: Marker):
     trip = await db.trips.find_one({"id": trip_id}, {"_id": 0})
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
+    marker = _resolve_marker_photo(marker)
     await db.trips.update_one(
         {"id": trip_id},
         {"$push": {"markers": marker.model_dump()}},
