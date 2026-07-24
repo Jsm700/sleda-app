@@ -73,7 +73,7 @@ export default function GalleryScreen() {
               onPress={() => setSelected(item)}
               testID={`photo-${item.marker_id}`}
             >
-              <Image source={{ uri: `data:image/jpeg;base64,${item.photo}` }} style={styles.thumb} />
+              <Image source={{ uri: item.photo }} style={styles.thumb} />
             </Pressable>
           )}
         />
@@ -83,7 +83,7 @@ export default function GalleryScreen() {
         <Pressable style={styles.backdrop} onPress={() => setSelected(null)}>
           {selected && (
             <View style={styles.viewer}>
-              <Image source={{ uri: `data:image/jpeg;base64,${selected.photo}` }} style={styles.fullImg} resizeMode="contain" />
+              <Image source={{ uri: selected.photo }} style={styles.fullImg} resizeMode="contain" />
               <View style={styles.viewerMeta}>
                 <Text style={styles.viewerDate}>{formatDateTime(selected.timestamp, lang)}</Text>
                 {selected.note ? <Text style={styles.viewerNote}>{selected.note}</Text> : null}
