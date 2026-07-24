@@ -44,6 +44,7 @@ export function buildGpx(trip: ApiTrip): string {
     <time>${isoTime(m.timestamp)}</time>
     <name>${esc(MARKER_LABEL[m.type] ?? m.type)}</name>
     ${m.note ? `<desc>${esc(m.note)}</desc>` : ""}
+    ${m.photo ? `<link href="${esc(m.photo)}"><text>Photo</text></link>` : ""}
     <sym>${esc(m.type)}</sym>
   </wpt>`,
     )
