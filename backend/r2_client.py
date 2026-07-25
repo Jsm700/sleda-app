@@ -20,6 +20,12 @@ _client = boto3.client(
 )
 
 
+def _public_url_for(key: str) -> str:
+    if R2_PUBLIC_URL:
+        return f"{R2_PUBLIC_URL}/{key}"
+    return f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com/{R2_BUCKET_NAME}/{key}"
+
+
 def upload_base64_photo(base64_data: str, content_type: str = "image/jpeg") -> str:
     if "," in base64_data and base64_data.strip().startswith("data:"):
         base64_data = base64_data.split(",", 1)[1]
@@ -34,7 +40,25 @@ def upload_base64_photo(base64_data: str, content_type: str = "image/jpeg") -> s
         Body=photo_bytes,
         ContentType=content_type,
     )
+    return _public_url_for(key)
 
-    if R2_PUBLIC_URL:
-        return f"{R2_PUBLIC_URL}/{key}"
-    return f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com/{R2_BUCKET_NAME}/{key}"
+
+def create_presigned_upload(content_type: str = "image/jpeg", expires_in: int = 300) -> dict:
+    ext = "jpg" if "jpeg" in content_type else content_type.split("/")[-1]
+    key = f"photos/{uuid.uuid4()}.{ext}"
+
+    upload_url = _client.generate_presigned_url(
+        "put_object",
+        Params={
+            "Bucket": R2_BUCKET_NAME,
+            "Key": key,
+            "ContentType": content_type,
+        },
+        ExpiresIn=expires_in,
+    )
+
+    return {
+        "upload_url": upload_url,
+        "public_url": _public_url_for(key),
+        "key": key,
+    }

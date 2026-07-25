@@ -10,7 +10,7 @@ from typing import List, Optional, Literal
 import uuid
 from datetime import datetime, timezone
 
-from r2_client import upload_base64_photo
+from r2_client import upload_base64_photo, create_presigned_upload
 
 
 ROOT_DIR = Path(__file__).parent
@@ -47,6 +47,16 @@ def _resolve_marker_photo(marker: Marker) -> Marker:
     if marker.photo and not marker.photo.startswith("http"):
         marker.photo = upload_base64_photo(marker.photo)
     return marker
+
+
+class PresignRequest(BaseModel):
+    content_type: str = "image/jpeg"
+
+
+class PresignResponse(BaseModel):
+    upload_url: str
+    public_url: str
+    key: str
 
 
 class RoutePoint(BaseModel):
@@ -93,6 +103,12 @@ def _clean(doc: dict) -> dict:
 @api_router.get("/")
 async def root():
     return {"message": "Sleda API", "status": "ok"}
+
+
+@api_router.post("/uploads/presign", response_model=PresignResponse)
+async def presign_upload(payload: PresignRequest):
+    result = create_presigned_upload(content_type=payload.content_type)
+    return PresignResponse(**result)
 
 
 @api_router.get("/stats")
