@@ -19,7 +19,7 @@ import { StatusBar } from "expo-status-bar";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import { uploadPhotoToR2 } from "@/src/utils/r2Upload";
+import { getPhotoForMarker } from "@/src/utils/r2Upload";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MapCanvas from "@/src/components/MapCanvas";
 import type {
@@ -517,10 +517,16 @@ try {
       setNotePhotoUrl(null);
       setNotePhotoUploading(true);
       try {
-        const url = await uploadPhotoToR2(localUri);
-        setNotePhotoUrl(url);
+        const { photo, uploaded } = await getPhotoForMarker(localUri);
+        setNotePhotoUrl(photo);
+        if (!uploaded) {
+          Alert.alert(
+            "Няма връзка",
+            "Снимката ще се качи автоматично при запазване на маршрута.",
+          );
+        }
       } catch (e) {
-        console.warn("photo upload failed", e);
+        console.warn("photo processing failed", e);
         Alert.alert(t("saveError"), String(e));
         setNotePhotoLocalUri(null);
       } finally {
