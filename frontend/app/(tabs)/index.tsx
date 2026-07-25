@@ -187,7 +187,8 @@ export default function HomeScreen() {
     const pending = await loadPendingTrip();
     if (!pending) return;
     try {
-      const id = pending.tripId ?? (await api.createTrip()).id;
+      const deviceId = await getDeviceId();
+      const id = pending.tripId ?? (await api.createTrip(undefined, deviceId)).id;
       await api.updateTrip(id, {
         ended_at: pending.endedAt,
         route: pending.route,
