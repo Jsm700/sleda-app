@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, Modal, Image, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, Modal, Image, ScrollView, Share } from "react-native";
 import type { MapMarker } from "@/src/components/MapCanvas.types";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -80,6 +80,16 @@ export default function TripDetailScreen() {
     }
   }, [trip, t]);
 
+  const handleShareLink = useCallback(async () => {
+    if (!trip) return;
+    const url = `${process.env.EXPO_PUBLIC_BACKEND_URL}/trip/${trip.id}`;
+    try {
+      await Share.share({ message: url, url });
+    } catch (e) {
+      Alert.alert(t("saveError"), String(e));
+    }
+  }, [trip, t]);
+
   const handleDelete = useCallback(() => {
     if (!id) return;
     Alert.alert(t("delete"), t("deleteConfirm"), [
@@ -152,6 +162,13 @@ export default function TripDetailScreen() {
               testID="export-gpx-btn"
             >
               <MaterialCommunityIcons name="export-variant" size={22} color={colors.brand} />
+            </Pressable>
+            <Pressable
+              onPress={handleShareLink}
+              style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+              testID="share-link-btn"
+            >
+              <MaterialCommunityIcons name="link-variant" size={22} color={colors.brand} />
             </Pressable>
             <Pressable
               onPress={handleDelete}
