@@ -270,6 +270,7 @@ def _render_trip_html(trip: dict) -> str:
   .leaflet-popup-tip {{ background: #1e1e1e; }}
   .popup-photo {{ width: 180px; max-width: 100%; border-radius: 8px; margin-top: 6px; display: block; }}
   footer {{ text-align: center; color: #606060; font-size: 12px; padding: 20px; }}
+  .leaflet-attribution-flag {{ display: none !important; }}
 </style>
 </head>
 <body>
