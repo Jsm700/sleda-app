@@ -68,6 +68,11 @@ export const api = {
       total_duration_s: number;
       markers_by_type: Record<MarkerType, number>;
     }>(`/stats${device_id ? `?device_id=${device_id}` : ""}`),
+  presignUpload: (content_type: string = "image/jpeg") =>
+    request<{ upload_url: string; public_url: string; key: string }>("/uploads/presign", {
+      method: "POST",
+      body: JSON.stringify({ content_type }),
+    }),
   listPhotos: (device_id?: string) =>
     request<{
       trip_id: string;
