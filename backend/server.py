@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -8,6 +9,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Literal
 import uuid
+import json
 from datetime import datetime, timezone
 
 from r2_client import upload_base64_photo, create_presigned_upload
@@ -227,6 +229,118 @@ async def add_marker(trip_id: str, marker: Marker):
         {"$push": {"markers": marker.model_dump()}},
     )
     return marker
+
+
+def _render_trip_html(trip: dict) -> str:
+    safe_json = json.dumps(trip).replace("</", "<\\/")
+    name = trip.get("name") or "Маршрут"
+    description = trip.get("description") or ""
+    return f"""<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{name} · Следа</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {{ color-scheme: dark; }}
+  * {{ box-sizing: border-box; }}
+  body {{
+    margin: 0; background: #121212; color: #f2f2f2;
+    font-family: -apple-system, Roboto, "Segoe UI", sans-serif;
+  }}
+  header {{ padding: 16px 20px 8px; }}
+  h1 {{ font-size: 22px; margin: 0 0 4px; }}
+  p.desc {{ color: #a0a0a0; font-size: 14px; margin: 0 0 12px; }}
+  .stats {{ display: flex; gap: 10px; padding: 0 20px 16px; }}
+  .stat {{
+    flex: 1; background: #1e1e1e; border: 1px solid #2c2c2c;
+    border-radius: 12px; padding: 10px; text-align: center;
+  }}
+  .stat .label {{ font-size: 11px; color: #909090; text-transform: uppercase; letter-spacing: .4px; }}
+  .stat .value {{ font-size: 18px; font-weight: 800; margin-top: 2px; }}
+  #map {{ width: 100%; height: 60vh; background: #1e1e1e; }}
+  .app-cta {{
+    display: block; margin: 16px 20px; padding: 14px; text-align: center;
+    background: #22c55e; color: #fff; text-decoration: none;
+    border-radius: 12px; font-weight: 800;
+  }}
+  .leaflet-popup-content-wrapper {{ background: #1e1e1e; color: #f2f2f2; }}
+  .leaflet-popup-tip {{ background: #1e1e1e; }}
+  .popup-photo {{ width: 180px; max-width: 100%; border-radius: 8px; margin-top: 6px; display: block; }}
+  footer {{ text-align: center; color: #606060; font-size: 12px; padding: 20px; }}
+</style>
+</head>
+<body>
+<header>
+  <h1>{name}</h1>
+  {f'<p class="desc">{description}</p>' if description else ''}
+</header>
+<div class="stats">
+  <div class="stat"><div class="label">Разстояние</div><div class="value" id="stat-distance">-</div></div>
+  <div class="stat"><div class="label">Време</div><div class="value" id="stat-duration">-</div></div>
+  <div class="stat"><div class="label">Маркери</div><div class="value" id="stat-markers">-</div></div>
+</div>
+<div id="map"></div>
+<a class="app-cta" href="https://play.google.com/store/apps" target="_blank" rel="noopener">Виж в приложението Следа</a>
+<footer>Създадено със Следа</footer>
+<script>
+  const trip = {safe_json};
+
+  function fmtDist(m) {{
+    if (m < 1000) return Math.round(m) + " m";
+    return (m / 1000).toFixed(2) + " km";
+  }}
+  function fmtDur(s) {{
+    s = Math.max(0, Math.floor(s));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return h + ":" + String(m).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
+    return String(m).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
+  }}
+
+  document.getElementById("stat-distance").textContent = fmtDist(trip.distance_m || 0);
+  document.getElementById("stat-duration").textContent = fmtDur(trip.duration_s || 0);
+  document.getElementById("stat-markers").textContent = (trip.markers || []).length;
+
+  const route = (trip.route || []).map(p => [p.latitude, p.longitude]);
+  const center = route[0] || (trip.markers && trip.markers[0]
+    ? [trip.markers[0].latitude, trip.markers[0].longitude]
+    : [42.6977, 23.3219]);
+
+  const map = L.map("map", {{ zoomControl: true }}).setView(center, 13);
+  L.tileLayer("https://{{s}}.basemaps.cartocdn.com/rastertiles/voyager/{{z}}/{{x}}/{{y}}{{r}}.png", {{
+    attribution: "&copy; OpenStreetMap &copy; CARTO",
+    maxZoom: 20,
+  }}).addTo(map);
+
+  if (route.length > 1) {{
+    const line = L.polyline(route, {{ color: "#22c55e", weight: 4 }}).addTo(map);
+    map.fitBounds(line.getBounds(), {{ padding: [30, 30] }});
+  }}
+
+  (trip.markers || []).forEach(m => {{
+    const marker = L.marker([m.latitude, m.longitude]).addTo(map);
+    let html = "<b>" + (m.type || "") + "</b>";
+    if (m.note) html += "<br/>" + m.note;
+    if (m.photo && m.photo.startsWith("http")) {{
+      html += '<img class="popup-photo" src="' + m.photo + '" />';
+    }}
+    marker.bindPopup(html);
+  }});
+</script>
+</body>
+</html>"""
+
+
+@app.get("/trip/{trip_id}", response_class=HTMLResponse)
+async def public_trip_page(trip_id: str):
+    doc = await db.trips.find_one({"id": trip_id}, {"_id": 0})
+    if not doc:
+        return HTMLResponse("<html><body style='background:#121212;color:#fff;font-family:sans-serif;text-align:center;padding:60px 20px'><h2>Маршрутът не е намерен</h2></body></html>", status_code=404)
+    return HTMLResponse(_render_trip_html(doc))
 
 
 app.include_router(api_router)
