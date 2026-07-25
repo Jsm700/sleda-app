@@ -34,8 +34,9 @@ import { useRouter } from "expo-router";
 import { api } from "@/src/api/client";
 import {
   savePendingTrip,
-  loadPendingTrip,
+  loadPendingTrips,
   clearPendingTrip,
+  clearAllPendingTrips,
 } from "@/src/utils/pendingTrip";
 
 import {
@@ -183,32 +184,46 @@ export default function HomeScreen() {
     }
   }, []);
 
-  const uploadPendingTrip = useCallback(async () => {
-    const pending = await loadPendingTrip();
-    if (!pending) return;
-    try {
-      const deviceId = await getDeviceId();
-      const id = pending.tripId ?? (await api.createTrip(undefined, deviceId)).id;
-      await api.updateTrip(id, {
-        ended_at: pending.endedAt,
-        route: pending.route,
-        markers: pending.markers,
-        distance_m: pending.distance_m,
-        duration_s: pending.duration_s,
-      });
-      await clearPendingTrip();
-      Alert.alert(t("uploadSuccess") ?? "\u041c\u0430\u0440\u0448\u0440\u0443\u0442\u044a\u0442 \u0435 \u043a\u0430\u0447\u0435\u043d \u0443\u0441\u043f\u0435\u0448\u043d\u043e!");
-    } catch (e) {
-      console.warn("uploadPendingTrip failed", e);
+  const uploadPendingTrips = useCallback(async () => {
+    const pendingList = await loadPendingTrips();
+    if (pendingList.length === 0) return;
+    let successCount = 0;
+    for (const pending of pendingList) {
+      try {
+        const deviceId = await getDeviceId();
+        const id = pending.tripId ?? (await api.createTrip(undefined, deviceId)).id;
+        await api.updateTrip(id, {
+          ended_at: pending.endedAt,
+          route: pending.route,
+          markers: pending.markers,
+          distance_m: pending.distance_m,
+          duration_s: pending.duration_s,
+        });
+        await clearPendingTrip(pending.localId);
+        successCount += 1;
+      } catch (e) {
+        console.warn("uploadPendingTrips: one trip failed, will retry next time", e);
+      }
+    }
+    if (successCount > 0) {
+      Alert.alert(
+        successCount === 1
+          ? (t("uploadSuccess") ?? "\u041c\u0430\u0440\u0448\u0440\u0443\u0442\u044a\u0442 \u0435 \u043a\u0430\u0447\u0435\u043d \u0443\u0441\u043f\u0435\u0448\u043d\u043e!")
+          : `${successCount} \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430 \u0441\u0430 \u043a\u0430\u0447\u0435\u043d\u0438 \u0443\u0441\u043f\u0435\u0448\u043d\u043e!`,
+      );
     }
   }, [t]);
 
-  const checkPendingTrip = useCallback(async () => {
-    const pending = await loadPendingTrip();
-    if (!pending) return;
+  const checkPendingTrips = useCallback(async () => {
+    const pendingList = await loadPendingTrips();
+    if (pendingList.length === 0) return;
+    const count = pendingList.length;
+    const isMany = count > 1;
     Alert.alert(
       t("pendingTitle") ?? "\u041d\u0435\u0437\u0430\u043f\u0430\u0437\u0435\u043d \u043c\u0430\u0440\u0448\u0440\u0443\u0442",
-      t("pendingBody") ?? "\u041f\u043e\u0441\u043b\u0435\u0434\u043d\u0438\u044f\u0442 \u043c\u0430\u0440\u0448\u0440\u0443\u0442 \u043d\u0435 \u0435 \u043a\u0430\u0447\u0435\u043d. \u0414\u0430 \u043e\u043f\u0438\u0442\u0430\u043c\u0435 \u0441\u0435\u0433\u0430?",
+      isMany
+        ? `\u0418\u043c\u0430 ${count} \u043d\u0435\u0437\u0430\u043f\u0430\u0437\u0435\u043d\u0438 \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430. \u0414\u0430 \u043e\u043f\u0438\u0442\u0430\u043c\u0435 \u0434\u0430 \u0433\u0438 \u043a\u0430\u0447\u0438\u043c \u0441\u0435\u0433\u0430?`
+        : (t("pendingBody") ?? "\u041f\u043e\u0441\u043b\u0435\u0434\u043d\u0438\u044f\u0442 \u043c\u0430\u0440\u0448\u0440\u0443\u0442 \u043d\u0435 \u0435 \u043a\u0430\u0447\u0435\u043d. \u0414\u0430 \u043e\u043f\u0438\u0442\u0430\u043c\u0435 \u0441\u0435\u0433\u0430?"),
       [
         {
           text: t("pendingDiscard") ?? "\u0418\u0437\u0442\u0440\u0438\u0439",
@@ -216,13 +231,15 @@ export default function HomeScreen() {
           onPress: () => {
             Alert.alert(
               t("pendingDiscardTitle") ?? "\u0421\u0438\u0433\u0443\u0440\u0435\u043d \u043b\u0438 \u0441\u0438?",
-              "\u041c\u0430\u0440\u0448\u0440\u0443\u0442\u044a\u0442 \u0449\u0435 \u0431\u044a\u0434\u0435 \u0438\u0437\u0442\u0440\u0438\u0442 \u0437\u0430\u0432\u0438\u043d\u0430\u0433\u0438!",
+              isMany
+                ? `\u0412\u0441\u0438\u0447\u043a\u0438 ${count} \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430 \u0449\u0435 \u0431\u044a\u0434\u0430\u0442 \u0438\u0437\u0442\u0440\u0438\u0442\u0438 \u0437\u0430\u0432\u0438\u043d\u0430\u0433\u0438!`
+                : "\u041c\u0430\u0440\u0448\u0440\u0443\u0442\u044a\u0442 \u0449\u0435 \u0431\u044a\u0434\u0435 \u0438\u0437\u0442\u0440\u0438\u0442 \u0437\u0430\u0432\u0438\u043d\u0430\u0433\u0438!",
               [
                 { text: t("pendingDiscardCancel") ?? "\u041e\u0442\u043a\u0430\u0437", style: "cancel" },
                 {
                   text: t("pendingDiscardConfirm") ?? "\u0414\u0430, \u0438\u0437\u0442\u0440\u0438\u0439",
                   style: "destructive",
-                  onPress: clearPendingTrip,
+                  onPress: clearAllPendingTrips,
                 },
               ],
             );
@@ -230,17 +247,17 @@ export default function HomeScreen() {
         },
         {
           text: t("pendingUpload") ?? "\u041a\u0430\u0447\u0438",
-          onPress: uploadPendingTrip,
+          onPress: uploadPendingTrips,
         },
       ],
     );
-  }, [t, uploadPendingTrip]);
+  }, [t, uploadPendingTrips]);
 
   const recoverActiveTrip = useCallback(async () => {
     try {
       const active = await isTrackingActive();
       if (!active) {
-        await checkPendingTrip();
+        await checkPendingTrips();
         return;
       }
       const { id, startedAt } = await readActiveTrip();
@@ -254,7 +271,7 @@ export default function HomeScreen() {
     } catch (e) {
       console.warn("recoverActiveTrip failed", e);
     }
-  }, [refreshFromStorage, startPolling, checkPendingTrip]);
+  }, [refreshFromStorage, startPolling, checkPendingTrips]);
 
 useEffect(() => {
     const handleUrl = (event: { url: string }) => {
@@ -430,7 +447,6 @@ try {
         distance_m: pending.distance,
         duration_s: pending.duration,
       });
-      await clearPendingTrip();
       Alert.alert(t("tripSavedTitle"), t("tripSavedBody"));
     } catch (e) {
       console.warn("save trip failed, storing locally", e);
