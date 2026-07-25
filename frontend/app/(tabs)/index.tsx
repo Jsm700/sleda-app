@@ -19,6 +19,7 @@ import { StatusBar } from "expo-status-bar";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
+import { uploadPhotoToR2 } from "@/src/utils/r2Upload";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MapCanvas from "@/src/components/MapCanvas";
 import type {
@@ -118,7 +119,9 @@ export default function HomeScreen() {
   const [, setSaving] = useState(false);
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
-  const [notePhoto, setNotePhoto] = useState<string | null>(null);
+  const [notePhotoLocalUri, setNotePhotoLocalUri] = useState<string | null>(null);
+  const [notePhotoUrl, setNotePhotoUrl] = useState<string | null>(null);
+  const [notePhotoUploading, setNotePhotoUploading] = useState(false);
   const [stopModalOpen, setStopModalOpen] = useState(false);
   const [stopName, setStopName] = useState("");
   const [stopDescription, setStopDescription] = useState("");
@@ -464,7 +467,9 @@ try {
           longitude: currentLocation.longitude,
         });
         setNoteText("");
-        setNotePhoto(null);
+        setNotePhotoLocalUri(null);
+        setNotePhotoUrl(null);
+        setNotePhotoUploading(false);
         setNoteModalOpen(true);
         return;
       }
@@ -487,35 +492,52 @@ try {
 
   const captureNotePhoto = useCallback(async (fromCamera: boolean) => {
     try {
+      let res: ImagePicker.ImagePickerResult;
       if (fromCamera) {
         const perm = await ImagePicker.requestCameraPermissionsAsync();
         if (!perm.granted) return;
-        const res = await ImagePicker.launchCameraAsync({
+        res = await ImagePicker.launchCameraAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 0.5,
-          base64: true,
+          quality: 0.8,
           allowsEditing: false,
         });
-        if (!res.canceled && res.assets[0]?.base64) setNotePhoto(res.assets[0].base64);
       } else {
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!perm.granted) return;
-        const res = await ImagePicker.launchImageLibraryAsync({
+        res = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 0.5,
-          base64: true,
+          quality: 0.8,
           allowsEditing: false,
         });
-        if (!res.canceled && res.assets[0]?.base64) setNotePhoto(res.assets[0].base64);
+      }
+      if (res.canceled || !res.assets[0]?.uri) return;
+
+      const localUri = res.assets[0].uri;
+      setNotePhotoLocalUri(localUri);
+      setNotePhotoUrl(null);
+      setNotePhotoUploading(true);
+      try {
+        const url = await uploadPhotoToR2(localUri);
+        setNotePhotoUrl(url);
+      } catch (e) {
+        console.warn("photo upload failed", e);
+        Alert.alert(t("saveError"), String(e));
+        setNotePhotoLocalUri(null);
+      } finally {
+        setNotePhotoUploading(false);
       }
     } catch (e) {
       console.warn("image picker failed", e);
     }
-  }, []);
+  }, [t]);
 
   const saveNoteMarker = useCallback(() => {
     if (!noteCoords) {
       setNoteModalOpen(false);
+      return;
+    }
+    if (notePhotoUploading) {
+      Alert.alert(t("saveError"), "Снимката все още се качва, изчакай малко.");
       return;
     }
     safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
@@ -526,7 +548,7 @@ try {
       longitude: noteCoords.longitude,
       timestamp: Date.now(),
       note: noteText.trim() || null,
-      photo: notePhoto,
+      photo: notePhotoUrl,
     };
     setMarkers((prev) => {
       const next = [...prev, m];
@@ -535,9 +557,10 @@ try {
     });
     setNoteModalOpen(false);
     setNoteText("");
-    setNotePhoto(null);
+    setNotePhotoLocalUri(null);
+    setNotePhotoUrl(null);
     setNoteCoords(null);
-  }, [noteCoords, noteText, notePhoto, safeHaptic]);
+  }, [noteCoords, noteText, notePhotoUrl, notePhotoUploading, safeHaptic, t]);
 
   const markerColorFor = useCallback(
     (type: MarkerType) =>
@@ -783,7 +806,7 @@ try {
             </Pressable>
             {selectedMarker?.photo ? (
               <Image
-                source={{ uri: `data:image/jpeg;base64,${selectedMarker.photo}` }}
+                source={{ uri: selectedMarker.photo }}
                 style={styles.photoViewerImage}
                 resizeMode="contain"
               />
@@ -827,16 +850,22 @@ try {
                 numberOfLines={3}
                 testID="note-text-input"
               />
-              {notePhoto ? (
+              {(notePhotoLocalUri || notePhotoUrl) ? (
                 <View style={styles.previewWrap}>
                   <Image
-                    source={{ uri: `data:image/jpeg;base64,${notePhoto}` }}
+                    source={{ uri: notePhotoLocalUri ?? notePhotoUrl ?? undefined }}
                     style={styles.preview}
                   />
+                  {notePhotoUploading && (
+                    <View style={styles.previewUploadingOverlay}>
+                      <ActivityIndicator color="#fff" />
+                    </View>
+                  )}
                   <Pressable
-                    onPress={() => setNotePhoto(null)}
+                    onPress={() => { setNotePhotoLocalUri(null); setNotePhotoUrl(null); }}
                     style={styles.previewRemove}
                     testID="note-photo-remove"
+                    disabled={notePhotoUploading}
                   >
                     <MaterialCommunityIcons name="close" size={18} color="#fff" />
                   </Pressable>
@@ -862,12 +891,17 @@ try {
                 </View>
               )}
               <Pressable
-                style={styles.modalSaveBtn}
+                style={[styles.modalSaveBtn, notePhotoUploading && { opacity: 0.6 }]}
                 onPress={saveNoteMarker}
+                disabled={notePhotoUploading}
                 testID="note-save-btn"
               >
-                <MaterialCommunityIcons name="check-bold" size={22} color="#fff" />
-                <Text style={styles.modalSaveText}>{t("save")}</Text>
+                {notePhotoUploading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <MaterialCommunityIcons name="check-bold" size={22} color="#fff" />
+                )}
+                <Text style={styles.modalSaveText}>{notePhotoUploading ? "Качва се снимка..." : t("save")}</Text>
               </Pressable>
             </ScrollView>
           </View>
@@ -1070,6 +1104,17 @@ const styles = StyleSheet.create({
   photoBtnText: { color: colors.onSurface, fontWeight: "700", fontSize: 14 },
   previewWrap: { position: "relative", alignItems: "center" },
   preview: { width: "100%", height: 240, borderRadius: radius.md, backgroundColor: colors.surfaceTertiary },
+  previewUploadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   previewRemove: {
     position: "absolute",
     top: 8,
