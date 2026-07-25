@@ -740,7 +740,7 @@ try {
         onRequestClose={() => setGhostModalOpen(false)}
       >
         <View style={styles.modalRoot}>
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Ghost Track</Text>
               <Pressable onPress={() => setGhostModalOpen(false)} style={styles.modalClose}>
@@ -785,7 +785,7 @@ try {
         onRequestClose={() => {}}
       >
         <View style={styles.modalRoot}>
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Записване на маршрут</Text>
             </View>
@@ -851,7 +851,7 @@ try {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.modalRoot}
         >
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t("addNote")}</Text>
               <Pressable
