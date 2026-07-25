@@ -12,6 +12,7 @@ export type GpxWaypoint = {
   name: string;
   desc?: string;
   sym?: string;
+  photo?: string;
 };
 
 export type ParsedGpx = {
@@ -36,6 +37,11 @@ function all(xml: string, tag: string): string[] {
   return xml.match(re) ?? [];
 }
 
+function linkHref(xml: string): string | undefined {
+  const m = xml.match(/<link\s+href="([^"]*)"/);
+  return m ? m[1] : undefined;
+}
+
 export function parseGpx(xml: string): ParsedGpx {
   const name = inner(xml, "name") || "Импортиран маршрут";
   const description = inner(xml, "desc") || undefined;
@@ -54,6 +60,7 @@ export function parseGpx(xml: string): ParsedGpx {
     name: inner(wpt, "name") || "",
     desc: inner(wpt, "desc") || undefined,
     sym: inner(wpt, "sym") || undefined,
+    photo: linkHref(wpt),
   })).filter((p) => !isNaN(p.latitude) && !isNaN(p.longitude));
 
   return { name, description, route, waypoints };
