@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, TextInput } from "react-native";
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, TextInput, Modal, Image } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -51,6 +51,7 @@ export default function GpxImportScreen() {
   const [description, setDescription] = useState("");
   const [route, setRoute] = useState<RoutePoint[]>([]);
   const [markers, setMarkers] = useState<MapMarker[]>([]);
+  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
 
   useEffect(() => {
     if (!url) {
@@ -86,7 +87,7 @@ export default function GpxImportScreen() {
             longitude: wp.longitude,
             timestamp: Date.now() + i,
             note: wp.desc ?? null,
-            photo: null,
+            photo: wp.photo ?? null,
           };
         }));
       } catch (e) {
@@ -168,6 +169,7 @@ export default function GpxImportScreen() {
             brandColor={colors.brand}
             markerColorFor={(type) => MARKER_COLORS[type] ?? colors.brand}
             markerLabelFor={() => ""}
+            onMarkerPress={(m) => { if (m.photo || m.note) setSelectedMarker(m); }}
           />
           <View style={styles.fields}>
             <Text style={styles.fieldLabel}>Име</Text>
@@ -191,6 +193,19 @@ export default function GpxImportScreen() {
           </View>
         </>
       )}
+
+      <Modal visible={!!selectedMarker} transparent animationType="fade" onRequestClose={() => setSelectedMarker(null)}>
+        <Pressable style={styles.photoBackdrop} onPress={() => setSelectedMarker(null)}>
+          <View style={styles.photoViewer}>
+            {selectedMarker?.photo && (
+              <Image source={{ uri: selectedMarker.photo }} style={styles.photoFull} resizeMode="contain" />
+            )}
+            {selectedMarker?.note && (
+              <Text style={styles.photoNote}>{selectedMarker.note}</Text>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
 
       {!loading && !error && (
         <View style={[styles.bottom, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
@@ -267,4 +282,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   cancelBtnText: { color: colors.onSurface, fontSize: 16, fontWeight: "700" },
+  photoBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
+  photoViewer: { width: "100%", alignItems: "center", gap: spacing.md, padding: spacing.lg },
+  photoFull: { width: "100%", height: 400, borderRadius: radius.md },
+  photoNote: { color: colors.onSurface, fontSize: 16, fontWeight: "700", textAlign: "center" },
 });
