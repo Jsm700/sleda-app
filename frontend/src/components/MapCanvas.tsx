@@ -11,8 +11,23 @@ const TILE_CACHE_PATH =
     ? `${FileSystem.cacheDirectory}osm-tiles`
     : undefined;
 
+const TILE_STYLES: Record<string, { urlTemplate: string; maximumZ: number }> = {
+  voyager: {
+    urlTemplate: "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+    maximumZ: 20,
+  },
+  topo: {
+    urlTemplate: "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
+    maximumZ: 17,
+  },
+  satellite: {
+    urlTemplate: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    maximumZ: 19,
+  },
+};
+
 const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
- { initialRegion, route, ghostRoute, ghostMarkers, markers, brandColor, markerLabelFor, onMarkerPress },
+ { initialRegion, route, ghostRoute, ghostMarkers, markers, brandColor, markerLabelFor, onMarkerPress, mapStyle },
   ref,
 ) {
   const reg: Region = {
@@ -21,6 +36,7 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
     latitudeDelta: initialRegion.latitudeDelta,
     longitudeDelta: initialRegion.longitudeDelta,
   };
+  const tile = TILE_STYLES[mapStyle ?? "voyager"] ?? TILE_STYLES.voyager;
 
   return (
     <MapView
@@ -35,8 +51,9 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
       testID="map-view"
     >
       <UrlTile
-        urlTemplate="https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
-        maximumZ={20}
+        key={mapStyle ?? "voyager"}
+        urlTemplate={tile.urlTemplate}
+        maximumZ={tile.maximumZ}
         flipY={false}
         tileCachePath={TILE_CACHE_PATH}
         tileCacheMaxAge={60 * 60 * 24 * 30}
