@@ -68,7 +68,7 @@ ${trip.route
 
 export async function shareTripAsGpx(trip: ApiTrip): Promise<void> {
   const xml = buildGpx(trip);
-  const safeName = (trip.name ?? trip.id).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const safeName = (trip.name ?? trip.id).replace(/[^a-zA-Zа-яА-Я0-9_-]/g, "_");
   const filename = `sleda_${safeName}.gpx`;
   const dir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? "";
   const path = `${dir}${filename}`;
