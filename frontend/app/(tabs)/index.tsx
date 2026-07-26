@@ -729,16 +729,26 @@ try {
             </Pressable>
           </View>
 
-          <Pressable onPress={cycleMapStyle} style={styles.mapStyleBtn} testID="map-style-btn">
-            <MaterialCommunityIcons
-              name={mapStyle === "voyager" ? "map-outline" : mapStyle === "topo" ? "terrain" : "satellite-variant"}
-              size={16}
-              color={colors.onSurfaceTertiary}
-            />
-            <Text style={styles.mapStyleBtnText}>
-              {mapStyle === "voyager" ? "Стандартна" : mapStyle === "topo" ? "Топографска" : "Сателит"}
-            </Text>
-          </Pressable>
+          <View style={styles.topButtonsRow}>
+            <Pressable
+              onPress={() => router.push("/offline-maps")}
+              style={styles.offlineMapsBtn}
+              testID="offline-maps-btn"
+            >
+              <MaterialCommunityIcons name="cloud-download-outline" size={16} color={colors.onSurfaceTertiary} />
+              <Text style={styles.mapStyleBtnText}>Офлайн карти</Text>
+            </Pressable>
+            <Pressable onPress={cycleMapStyle} style={styles.mapStyleBtn} testID="map-style-btn">
+              <MaterialCommunityIcons
+                name={mapStyle === "voyager" ? "map-outline" : mapStyle === "topo" ? "terrain" : "satellite-variant"}
+                size={16}
+                color={colors.onSurfaceTertiary}
+              />
+              <Text style={styles.mapStyleBtnText}>
+                {mapStyle === "voyager" ? "Стандартна" : mapStyle === "topo" ? "Топографска" : "Сателит"}
+              </Text>
+            </Pressable>
+          </View>
 
           {isTracking && (
             <View style={styles.recordingBadge} pointerEvents="none">
@@ -1107,8 +1117,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#fff" },
-  mapStyleBtn: {
-    alignSelf: "flex-end",
+  topButtonsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing.sm,
+  },
+  offlineMapsBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -1118,7 +1132,17 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingVertical: 6,
     paddingHorizontal: 10,
-    marginTop: spacing.sm,
+  },
+  mapStyleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(18,18,18,0.85)",
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
   mapStyleBtnText: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "700" },
   recordingText: { color: "#fff", fontSize: 12, fontWeight: "800", letterSpacing: 0.6 },
