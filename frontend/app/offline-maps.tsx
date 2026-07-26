@@ -13,7 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { StatusBar } from "expo-status-bar";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import MapView, { UrlTile, Marker, Region } from "react-native-maps";
+import MapView, { UrlTile, Marker, Region, PROVIDER_DEFAULT } from "react-native-maps";
 import { colors, spacing, radius } from "@/src/theme/colors";
 import {
   tilesForRegion,
@@ -206,6 +206,7 @@ export default function OfflineMapsScreen() {
       <View style={styles.mapWrap}>
         <MapView
           ref={mapRef}
+          provider={PROVIDER_DEFAULT}
           style={{ flex: 1 }}
           initialRegion={initialRegion}
           onRegionChangeComplete={(r) => setCenter({ latitude: r.latitude, longitude: r.longitude })}
