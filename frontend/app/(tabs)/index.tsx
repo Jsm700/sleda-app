@@ -125,6 +125,7 @@ export default function HomeScreen() {
   const [notePhotoUrl, setNotePhotoUrl] = useState<string | null>(null);
   const [notePhotoUploading, setNotePhotoUploading] = useState(false);
   const [stopModalOpen, setStopModalOpen] = useState(false);
+  const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
   const [stopName, setStopName] = useState("");
   const [stopDescription, setStopDescription] = useState("");
   const [noteCoords, setNoteCoords] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -380,53 +381,110 @@ try {
 
       startPolling();
     } else {
-      safeHaptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
-      stopPolling();
-
-      try {
-        const running = await isTrackingActive();
-        if (running) await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-      } catch (e) {
-        console.warn("stopLocationUpdatesAsync failed", e);
-      }
-
-      const finalPoints = await readStoredRoute();
-      const finalDistance = computeTotalDistance(finalPoints);
-      const finalDurationS = startTimeRef.current
-        ? Math.floor((Date.now() - startTimeRef.current) / 1000)
-        : elapsed;
-      const finalRoute = finalPoints.map((p) => ({
-        latitude: p.latitude,
-        longitude: p.longitude,
-        timestamp: new Date(p.timestamp).toISOString(),
-      }));
-      const finalMarkers = markersRef.current.map((m) => ({
-        id: m.id,
-        type: m.type,
-        latitude: m.latitude,
-        longitude: m.longitude,
-        note: m.note ?? null,
-        photo: m.photo ?? null,
-        timestamp: new Date(m.timestamp).toISOString(),
-      }));
-
-      setIsTracking(false);
-      setRoute(finalPoints);
-      setDistance(finalDistance);
-
-      pendingSaveRef.current = {
-        route: finalRoute,
-        markers: finalMarkers,
-        distance: finalDistance,
-        duration: finalDurationS,
-        endedAt: new Date().toISOString(),
-      };
-      const defaultName = `Маршрут · ${new Date().toLocaleDateString("bg-BG")}`;
-      setStopName(defaultName);
-      setStopDescription("");
-      setStopModalOpen(true);
+      // Не спираме записа веднага - отваряме избор (продължи / запази / изтрий),
+      // GPS продължава да пише точки, докато потребителят не потвърди реално спиране.
+      setStopConfirmOpen(true);
     }
-  }, [isTracking, permissionStatus, initLocation, t, safeHaptic, elapsed, startPolling, stopPolling]);
+  }, [isTracking, permissionStatus, initLocation, t, safeHaptic, startPolling]);
+
+  const finalizeStopForSave = useCallback(async () => {
+    safeHaptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
+    stopPolling();
+
+    try {
+      const running = await isTrackingActive();
+      if (running) await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    } catch (e) {
+      console.warn("stopLocationUpdatesAsync failed", e);
+    }
+
+    const finalPoints = await readStoredRoute();
+    const finalDistance = computeTotalDistance(finalPoints);
+    const finalDurationS = startTimeRef.current
+      ? Math.floor((Date.now() - startTimeRef.current) / 1000)
+      : elapsed;
+    const finalRoute = finalPoints.map((p) => ({
+      latitude: p.latitude,
+      longitude: p.longitude,
+      timestamp: new Date(p.timestamp).toISOString(),
+    }));
+    const finalMarkers = markersRef.current.map((m) => ({
+      id: m.id,
+      type: m.type,
+      latitude: m.latitude,
+      longitude: m.longitude,
+      note: m.note ?? null,
+      photo: m.photo ?? null,
+      timestamp: new Date(m.timestamp).toISOString(),
+    }));
+
+    setIsTracking(false);
+    setRoute(finalPoints);
+    setDistance(finalDistance);
+
+    pendingSaveRef.current = {
+      route: finalRoute,
+      markers: finalMarkers,
+      distance: finalDistance,
+      duration: finalDurationS,
+      endedAt: new Date().toISOString(),
+    };
+    const defaultName = `Маршрут · ${new Date().toLocaleDateString("bg-BG")}`;
+    setStopName(defaultName);
+    setStopDescription("");
+    setStopModalOpen(true);
+  }, [safeHaptic, stopPolling, elapsed]);
+
+  const discardStopWithoutSaving = useCallback(async () => {
+    safeHaptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning));
+    stopPolling();
+    try {
+      const running = await isTrackingActive();
+      if (running) await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    } catch (e) {
+      console.warn("stopLocationUpdatesAsync failed", e);
+    }
+    if (tripIdRef.current) {
+      try {
+        await api.deleteTrip(tripIdRef.current);
+      } catch (e) {
+        console.warn("deleteTrip (discard) failed", e);
+      }
+    }
+    await clearStoredRoute();
+    setIsTracking(false);
+    setRoute([]);
+    setMarkers([]);
+    markersRef.current = [];
+    setDistance(0);
+    setElapsed(0);
+    tripIdRef.current = null;
+    startTimeRef.current = null;
+    pendingSaveRef.current = null;
+  }, [safeHaptic, stopPolling]);
+
+  const handleStopConfirmSave = useCallback(() => {
+    setStopConfirmOpen(false);
+    finalizeStopForSave();
+  }, [finalizeStopForSave]);
+
+  const handleStopConfirmDiscard = useCallback(() => {
+    Alert.alert(
+      "Изтриване без запис",
+      "Целият маршрут ще бъде изтрит. Сигурен ли си?",
+      [
+        { text: "Отказ", style: "cancel" },
+        {
+          text: "Да, изтрий",
+          style: "destructive",
+          onPress: () => {
+            setStopConfirmOpen(false);
+            discardStopWithoutSaving();
+          },
+        },
+      ],
+    );
+  }, [discardStopWithoutSaving]);
 
   const confirmStopSave = useCallback(async () => {
     const pending = pendingSaveRef.current;
@@ -805,6 +863,29 @@ try {
         </View>
       </Modal>
       <Modal
+        visible={stopConfirmOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setStopConfirmOpen(false)}
+      >
+        <View style={styles.modalRoot}>
+          <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Спиране на записа</Text>
+            </View>
+            <Pressable style={styles.stopSaveBtn} onPress={handleStopConfirmSave} testID="stop-confirm-save">
+              <Text style={styles.stopSaveBtnText}>Запази маршрута</Text>
+            </Pressable>
+            <Pressable style={styles.stopContinueBtn} onPress={() => setStopConfirmOpen(false)} testID="stop-confirm-continue">
+              <Text style={styles.stopContinueBtnText}>Продължи записа</Text>
+            </Pressable>
+            <Pressable style={styles.stopDiscardBtn} onPress={handleStopConfirmDiscard} testID="stop-confirm-discard">
+              <Text style={styles.stopDiscardBtnText}>Изтрий без запис</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+      <Modal
         visible={stopModalOpen}
         animationType="slide"
         transparent
@@ -1134,6 +1215,23 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   stopSaveBtnText: { color: "#fff", fontSize: 16, fontWeight: "900" },
+  stopContinueBtn: {
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    alignItems: "center",
+    marginTop: spacing.xs,
+  },
+  stopContinueBtnText: { color: colors.onSurface, fontSize: 15, fontWeight: "800" },
+  stopDiscardBtn: {
+    borderRadius: radius.md,
+    padding: spacing.md,
+    alignItems: "center",
+    marginTop: spacing.xs,
+  },
+  stopDiscardBtnText: { color: colors.error, fontSize: 14, fontWeight: "700" },
   noteInput: {
     backgroundColor: colors.surfaceSecondary,
     color: colors.onSurface,
