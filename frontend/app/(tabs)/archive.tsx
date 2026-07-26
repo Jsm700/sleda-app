@@ -156,7 +156,7 @@ export default function ArchiveScreen() {
           testID="trip-list"
         />
       )} 
-      <DeviceIdModal forceVisible={codeModalOpen} onClose={() => setCodeModalOpen(false)} />
+      <DeviceIdModal forceVisible={codeModalOpen} onClose={() => { setCodeModalOpen(false); load(); }} />
     </SafeAreaView>
   );
 }
