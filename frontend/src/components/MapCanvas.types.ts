@@ -1,5 +1,6 @@
 // Shared types between native and web map implementations.
 export type MarkerType = "car" | "fish" | "mushroom" | "hazard" | "water" | "poi" | "note";
+export type MapTileStyle = "voyager" | "topo" | "satellite";
 
 export type MapMarker = {
   id: string;
@@ -32,6 +33,7 @@ export type MapCanvasProps = {
   markerColorFor: (t: MarkerType) => string;
   markerLabelFor: (t: MarkerType) => string;
   onMarkerPress?: (marker: MapMarker) => void;
+  mapStyle?: MapTileStyle;
 };
 
 export type MapCanvasHandle = {
