@@ -585,6 +585,16 @@ try {
     setNoteCoords(null);
   }, [noteCoords, noteText, notePhotoUrl, notePhotoUploading, safeHaptic, t]);
 
+  const handleDeleteSelectedMarker = useCallback(() => {
+    if (!selectedMarker) return;
+    setMarkers((prev) => {
+      const next = prev.filter((m) => m.id !== selectedMarker.id);
+      markersRef.current = next;
+      return next;
+    });
+    setSelectedMarker(null);
+  }, [selectedMarker]);
+
   const markerColorFor = useCallback(
     (type: MarkerType) =>
       MARKER_BUTTONS.find((b) => b.type === type)?.color ?? colors.brand,
@@ -620,7 +630,7 @@ try {
           brandColor={colors.brand}
           markerColorFor={markerColorFor}
           markerLabelFor={markerLabelFor}
-          onMarkerPress={(m) => { if (m.photo || m.note) setSelectedMarker(m); }}
+          onMarkerPress={(m) => setSelectedMarker(m)}
         />
 
         <SafeAreaView edges={["top"]} style={styles.topOverlay} pointerEvents="box-none">
@@ -707,11 +717,23 @@ try {
         </View>
 
         <Pressable
-          onPress={() => setGhostModalOpen(true)}
-          style={styles.ghostBtn}
+          onPress={() => {
+            if (ghostRoute.length > 0) {
+              setGhostRoute([]);
+              setGhostMarkers([]);
+            } else {
+              setGhostModalOpen(true);
+            }
+          }}
+          style={[styles.ghostBtn, ghostRoute.length > 0 && styles.ghostBtnActive]}
+          testID="ghost-btn"
         >
-          <MaterialCommunityIcons name="map-marker-path" size={24} color={colors.onSurface} />
-          <Text style={styles.markerLabel}>Ghost</Text>
+          <MaterialCommunityIcons
+            name={ghostRoute.length > 0 ? "close-circle" : "map-marker-path"}
+            size={24}
+            color={ghostRoute.length > 0 ? colors.error : colors.onSurface}
+          />
+          <Text style={styles.markerLabel}>{ghostRoute.length > 0 ? "Изчисти" : "Ghost"}</Text>
         </Pressable>
         <Pressable
           onPress={handleStartStop}
@@ -837,6 +859,13 @@ try {
             {selectedMarker?.note ? (
               <Text style={styles.photoViewerNote}>{selectedMarker.note}</Text>
             ) : null}
+            {selectedMarker && !selectedMarker.photo && !selectedMarker.note ? (
+              <Text style={styles.photoViewerNote}>{markerLabelFor(selectedMarker.type)}</Text>
+            ) : null}
+            <Pressable style={styles.deleteMarkerBtn} onPress={handleDeleteSelectedMarker} testID="delete-marker-btn">
+              <MaterialCommunityIcons name="trash-can-outline" size={18} color="#fff" />
+              <Text style={styles.deleteMarkerBtnText}>Изтрий маркера</Text>
+            </Pressable>
           </View>
         </Pressable>
       </Modal>
@@ -1058,6 +1087,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
   },
+  ghostBtnActive: { borderColor: colors.error },
   startStopBtn: {
     minHeight: 72,
     borderRadius: radius.md,
@@ -1195,4 +1225,15 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     fontWeight: "500",
   },
+  deleteMarkerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.error,
+    borderRadius: radius.md,
+    margin: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  deleteMarkerBtnText: { color: "#fff", fontWeight: "800", fontSize: 14 },
 });
