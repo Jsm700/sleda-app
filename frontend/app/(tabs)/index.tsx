@@ -27,6 +27,7 @@ import type {
   RoutePoint,
   MarkerType,
   MapCanvasHandle,
+  MapTileStyle,
 } from "@/src/components/MapCanvas.types";
 import { colors, spacing, radius } from "@/src/theme/colors";
 import { useTranslation, type TranslationKey } from "@/src/i18n";
@@ -115,6 +116,7 @@ export default function HomeScreen() {
   const [ghostMarkers, setGhostMarkers] = useState<MapMarker[]>([]);
   const [ghostModalOpen, setGhostModalOpen] = useState(false);
   const [ghostVisible, setGhostVisible] = useState(true);
+  const [mapStyle, setMapStyle] = useState<MapTileStyle>("voyager");
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [distance, setDistance] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -654,6 +656,10 @@ try {
     setSelectedMarker(null);
   }, [selectedMarker]);
 
+  const cycleMapStyle = useCallback(() => {
+    setMapStyle((s) => (s === "voyager" ? "topo" : s === "topo" ? "satellite" : "voyager"));
+  }, []);
+
   const markerColorFor = useCallback(
     (type: MarkerType) =>
       MARKER_BUTTONS.find((b) => b.type === type)?.color ?? colors.brand,
@@ -690,6 +696,7 @@ try {
           markerColorFor={markerColorFor}
           markerLabelFor={markerLabelFor}
           onMarkerPress={(m) => setSelectedMarker(m)}
+          mapStyle={mapStyle}
         />
 
         <SafeAreaView edges={["top"]} style={styles.topOverlay} pointerEvents="box-none">
@@ -721,6 +728,17 @@ try {
               <Text style={styles.statusValue}>{lang === "bg" ? "БГ" : "EN"}</Text>
             </Pressable>
           </View>
+
+          <Pressable onPress={cycleMapStyle} style={styles.mapStyleBtn} testID="map-style-btn">
+            <MaterialCommunityIcons
+              name={mapStyle === "voyager" ? "map-outline" : mapStyle === "topo" ? "terrain" : "satellite-variant"}
+              size={16}
+              color={colors.onSurfaceTertiary}
+            />
+            <Text style={styles.mapStyleBtnText}>
+              {mapStyle === "voyager" ? "Стандартна" : mapStyle === "topo" ? "Топографска" : "Сателит"}
+            </Text>
+          </Pressable>
 
           {isTracking && (
             <View style={styles.recordingBadge} pointerEvents="none">
@@ -1089,6 +1107,20 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#fff" },
+  mapStyleBtn: {
+    alignSelf: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(18,18,18,0.85)",
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginTop: spacing.sm,
+  },
+  mapStyleBtnText: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "700" },
   recordingText: { color: "#fff", fontSize: 12, fontWeight: "800", letterSpacing: 0.6 },
  langFloating: { position: "absolute", top: 0, right: spacing.md },
   langPill: {
