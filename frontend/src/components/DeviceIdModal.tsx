@@ -24,13 +24,12 @@ export default function DeviceIdModal({ forceVisible, onClose }: Props) {
   const visible = forceVisible || autoVisible;
 
   useEffect(() => {
+    // Кодът се генерира тихо в заден план — вече не прекъсваме
+    // потребителя с принудителен modal при първо отваряне.
+    // Достъпен е само ръчно, през key иконата в архива (forceVisible).
     (async () => {
       const id = await getDeviceId();
       setCode(id);
-      if (forceVisible) return;
-      const shown = await AsyncStorage.getItem(SHOWN_KEY);
-      if (shown) return;
-      setAutoVisible(true);
     })();
   }, [forceVisible]);
 
