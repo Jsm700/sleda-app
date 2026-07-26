@@ -114,6 +114,7 @@ export default function HomeScreen() {
   const [ghostRoute, setGhostRoute] = useState<RoutePoint[]>([]);
   const [ghostMarkers, setGhostMarkers] = useState<MapMarker[]>([]);
   const [ghostModalOpen, setGhostModalOpen] = useState(false);
+  const [ghostVisible, setGhostVisible] = useState(true);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [distance, setDistance] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -624,8 +625,8 @@ try {
           ref={mapRef}
           initialRegion={initialRegion}
           route={route}
-          ghostRoute={ghostRoute}
-          ghostMarkers={ghostMarkers}
+          ghostRoute={ghostVisible ? ghostRoute : []}
+          ghostMarkers={ghostVisible ? ghostMarkers : []}
           markers={markers}
           brandColor={colors.brand}
           markerColorFor={markerColorFor}
@@ -718,22 +719,24 @@ try {
 
         <Pressable
           onPress={() => {
-            if (ghostRoute.length > 0) {
-              setGhostRoute([]);
-              setGhostMarkers([]);
-            } else {
+            if (ghostRoute.length === 0) {
               setGhostModalOpen(true);
+            } else {
+              setGhostVisible((v) => !v);
             }
           }}
+          onLongPress={() => setGhostModalOpen(true)}
           style={[styles.ghostBtn, ghostRoute.length > 0 && styles.ghostBtnActive]}
           testID="ghost-btn"
         >
           <MaterialCommunityIcons
-            name={ghostRoute.length > 0 ? "close-circle" : "map-marker-path"}
+            name={ghostRoute.length === 0 ? "map-marker-path" : (ghostVisible ? "eye-off-outline" : "eye-outline")}
             size={24}
-            color={ghostRoute.length > 0 ? colors.error : colors.onSurface}
+            color={ghostRoute.length === 0 ? colors.onSurface : colors.brand}
           />
-          <Text style={styles.markerLabel}>{ghostRoute.length > 0 ? "Изчисти" : "Ghost"}</Text>
+          <Text style={styles.markerLabel}>
+            {ghostRoute.length === 0 ? "Ghost" : (ghostVisible ? "Скрий" : "Покажи")}
+          </Text>
         </Pressable>
         <Pressable
           onPress={handleStartStop}
@@ -774,6 +777,7 @@ try {
                 onSelect={(route, ghostMkrs) => {
                   setGhostRoute(route);
                   setGhostMarkers(ghostMkrs);
+                  setGhostVisible(true);
                   setGhostModalOpen(false);
                   if (route.length > 0) {
                     const lats = route.map((p) => p.latitude);
