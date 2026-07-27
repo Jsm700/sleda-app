@@ -13,7 +13,7 @@ const EARTH_RADIUS_KM = 6371;
 export type ZoomPreset = "walker" | "overview";
 
 export const ZOOM_PRESETS: Record<ZoomPreset, { minZoom: number; maxZoom: number; label: string }> = {
-  walker: { minZoom: 12, maxZoom: 16, label: "Пешеходец" },
+  walker: { minZoom: 12, maxZoom: 17, label: "Пешеходец" },
   overview: { minZoom: 10, maxZoom: 13, label: "Общ преглед" },
 };
 
