@@ -660,6 +660,19 @@ try {
     setMapStyle((s) => (s === "voyager" ? "topo" : s === "topo" ? "satellite" : "voyager"));
   }, []);
 
+  const handleRecenter = useCallback(() => {
+    if (!currentLocation) return;
+    mapRef.current?.animateToRegion(
+      {
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
+      },
+      500,
+    );
+  }, [currentLocation]);
+
   const markerColorFor = useCallback(
     (type: MarkerType) =>
       MARKER_BUTTONS.find((b) => b.type === type)?.color ?? colors.brand,
@@ -779,6 +792,12 @@ try {
               <Text style={styles.permissionBtnText}>{t("enableLocation")}</Text>
             </Pressable>
           </View>
+        )}
+
+        {currentLocation && (
+          <Pressable onPress={handleRecenter} style={styles.recenterBtn} testID="recenter-btn">
+            <MaterialCommunityIcons name="crosshairs-gps" size={22} color={colors.brand} />
+          </Pressable>
         )}
       </View>
 
@@ -1159,6 +1178,19 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   langPillText: { color: colors.onSurface, fontSize: 12, fontWeight: "800", letterSpacing: 0.6 },
+  recenterBtn: {
+    position: "absolute",
+    bottom: spacing.lg,
+    right: spacing.md,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(18,18,18,0.9)",
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   locatingOverlay: {
     position: "absolute",
     bottom: spacing.lg,
