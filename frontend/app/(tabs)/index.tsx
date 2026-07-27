@@ -49,6 +49,7 @@ import {
   setActiveTrip,
 } from "@/src/tracking/locationTask";
 import { getDeviceId } from "@/src/utils/deviceId";
+import { reverseGeocode } from "@/src/utils/geocode";
 import * as Linking from "expo-linking";
 import GhostTrackPicker from "@/src/components/GhostTrackPicker";
 const MARKER_BUTTONS: {
@@ -431,7 +432,27 @@ try {
       duration: finalDurationS,
       endedAt: new Date().toISOString(),
     };
-    const defaultName = `Маршрут · ${new Date().toLocaleDateString("bg-BG")}`;
+    const dateStr = new Date().toLocaleDateString("bg-BG");
+    const placeName = finalPoints.length > 0
+      ? await reverseGeocode(finalPoints[0].latitude, finalPoints[0].longitude)
+      : null;
+    const markerCounts: Record<string, number> = {};
+    for (const m of finalMarkers) markerCounts[m.type] = (markerCounts[m.type] || 0) + 1;
+    const MARKER_PLURAL_BG: Record<string, string> = {
+      car: "коли/лодки",
+      fish: "риби",
+      mushroom: "гъби",
+      hazard: "опасности",
+      water: "чешми",
+      poi: "маркери",
+      note: "бележки",
+    };
+    const summaryParts = Object.entries(markerCounts)
+      .filter(([, c]) => c > 0)
+      .map(([type, c]) => `${MARKER_PLURAL_BG[type] ?? type} x${c}`);
+    const defaultName = placeName
+      ? [placeName, ...summaryParts, dateStr].join(" · ")
+      : `Маршрут · ${dateStr}`;
     setStopName(defaultName);
     setStopDescription("");
     setStopModalOpen(true);
