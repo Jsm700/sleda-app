@@ -170,6 +170,20 @@ export default function OfflineMapsScreen() {
     }
   }, [center, radiusKm, preset, regionName, approxMb, loadRegions]);
 
+  const handleJumpToRegion = useCallback((region: OfflineRegion) => {
+    setCenter(region.center);
+    const latDelta = (region.radiusKm / 111) * 2.4;
+    mapRef.current?.animateToRegion(
+      {
+        latitude: region.center.latitude,
+        longitude: region.center.longitude,
+        latitudeDelta: latDelta,
+        longitudeDelta: latDelta,
+      },
+      500,
+    );
+  }, []);
+
   const handleDeleteRegion = useCallback(
     (id: string, name: string) => {
       Alert.alert("Изтриване", `Регион "${name}" ще бъде премахнат от списъка. Сигурен ли си?`, [
@@ -308,12 +322,16 @@ export default function OfflineMapsScreen() {
             <Text style={[styles.sectionLabel, { marginTop: spacing.lg }]}>Свалени региони</Text>
             {regions.map((r) => (
               <View key={r.id} style={styles.regionRowContainer}>
-                <View style={styles.regionRow}>
+                <Pressable
+                  style={styles.regionRow}
+                  onPress={() => handleJumpToRegion(r)}
+                  testID={`jump-region-${r.id}`}
+                >
                   <Text style={styles.regionName}>{r.name}</Text>
                   <Text style={styles.regionInfo}>
                     {r.radiusKm} км · {ZOOM_PRESETS[r.preset].label} · ~{r.approxSizeMb} MB
                   </Text>
-                </View>
+                </Pressable>
                 <Pressable
                   style={styles.deleteRegionBtn}
                   onPress={() => handleDeleteRegion(r.id, r.name)}
