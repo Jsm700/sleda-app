@@ -67,6 +67,7 @@ export default function OfflineMapsScreen() {
   const [radiusKm, setRadiusKm] = useState(10);
   const [preset, setPreset] = useState<ZoomPreset>("walker");
   const [downloadStyle, setDownloadStyle] = useState<MapTileStyle>("topo");
+  const [fullscreen, setFullscreen] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [searching, setSearching] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -252,7 +253,7 @@ export default function OfflineMapsScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.mapWrap}>
+      <View style={[styles.mapWrap, fullscreen && styles.mapWrapFullscreen]}>
         <MapView
           ref={mapRef}
           provider={PROVIDER_DEFAULT}
@@ -276,6 +277,17 @@ export default function OfflineMapsScreen() {
         <View style={styles.centerPin} pointerEvents="none">
           <MaterialCommunityIcons name="map-marker" size={36} color={colors.brand} />
         </View>
+        <Pressable
+          onPress={() => setFullscreen((v) => !v)}
+          style={[styles.fullscreenBtn, { bottom: Math.max(insets.bottom, spacing.sm) + spacing.sm }]}
+          testID="fullscreen-toggle-btn"
+        >
+          <MaterialCommunityIcons
+            name={fullscreen ? "fullscreen-exit" : "fullscreen"}
+            size={22}
+            color={colors.onSurface}
+          />
+        </Pressable>
       </View>
 
       <ScrollView
@@ -422,6 +434,27 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   mapWrap: { height: 260, backgroundColor: colors.surfaceTertiary, position: "relative" },
+  mapWrapFullscreen: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: undefined,
+    zIndex: 10,
+  },
+  fullscreenBtn: {
+    position: "absolute",
+    right: spacing.sm,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(18,18,18,0.9)",
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   centerPin: {
     position: "absolute",
     top: "50%",
