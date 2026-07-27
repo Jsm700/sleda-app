@@ -117,7 +117,7 @@ export default function HomeScreen() {
   const [ghostMarkers, setGhostMarkers] = useState<MapMarker[]>([]);
   const [ghostModalOpen, setGhostModalOpen] = useState(false);
   const [ghostVisible, setGhostVisible] = useState(true);
-  const [mapStyle, setMapStyle] = useState<MapTileStyle>("topo");
+  const [mapStyle, setMapStyle] = useState<MapTileStyle>("satellite");
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [distance, setDistance] = useState(0);
   const [elapsed, setElapsed] = useState(0);
