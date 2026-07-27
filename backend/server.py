@@ -172,10 +172,18 @@ async def create_trip(payload: TripCreate):
     return trip
 
 @api_router.get("/trips", response_model=List[Trip])
-async def list_trips(device_id: Optional[str] = None):
+async def list_trips(device_id: Optional[str] = None, full: bool = False):
+    # By default, skip the route point array (the actual payload bloat -
+    # can be thousands of GPS points per trip). Markers stay included,
+    # since the archive list/thumbnails need them. Screens that need the
+    # real route (Ghost Track picker) pass full=true explicitly.
     query = {"device_id": device_id} if device_id else {}
-    cursor = db.trips.find(query, {"_id": 0}).sort("started_at", -1)
+    projection = {"_id": 0} if full else {"_id": 0, "route": 0}
+    cursor = db.trips.find(query, projection).sort("started_at", -1)
     docs = await cursor.to_list(length=500)
+    if not full:
+        for d in docs:
+            d.setdefault("route", [])
     return [Trip(**d) for d in docs]
 
 @api_router.get("/trips/{trip_id}", response_model=Trip)
