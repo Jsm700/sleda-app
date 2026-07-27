@@ -6,6 +6,7 @@
 // region's tile grid. This reuses the exact same caching mechanism
 // already relied on elsewhere in the app for "previously seen regions".
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { MapTileStyle } from "@/src/components/MapCanvas.types";
 
 const REGIONS_KEY = "sleda.offline_regions";
 const EARTH_RADIUS_KM = 6371;
@@ -27,6 +28,7 @@ export type OfflineRegion = {
   center: LatLon;
   radiusKm: number;
   preset: ZoomPreset;
+  style: MapTileStyle;
   tileCount: number;
   approxSizeMb: number;
   savedAt: string;
