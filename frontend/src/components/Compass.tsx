@@ -14,7 +14,7 @@ export default function Compass() {
 
   useEffect(() => {
     Magnetometer.setUpdateInterval(200);
-    const sub = Magnetometer.addListener(({ x, y }) => {
+    const sub = Magnetometer.addListener(({ x, y }: { x: number; y: number; z: number }) => {
       let angle = Math.atan2(y, x) * (180 / Math.PI);
       angle = angle < 0 ? angle + 360 : angle;
       setHeading(angle);
