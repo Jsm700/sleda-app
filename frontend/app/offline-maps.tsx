@@ -12,7 +12,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import MapView, { UrlTile, Marker, Region, PROVIDER_DEFAULT } from "react-native-maps";
 import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
@@ -64,6 +64,12 @@ export default function OfflineMapsScreen() {
   useEffect(() => {
     loadRegions();
   }, [loadRegions]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadRegions();
+    }, [loadRegions]),
+  );
 
   const initialRegion: Region = {
     latitude: center.latitude,
