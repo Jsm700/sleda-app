@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -60,6 +60,10 @@ export default function OfflineMapsScreen() {
   const loadRegions = useCallback(async () => {
     setRegions(await loadOfflineRegions());
   }, []);
+
+  useEffect(() => {
+    loadRegions();
+  }, [loadRegions]);
 
   const initialRegion: Region = {
     latitude: center.latitude,
