@@ -29,8 +29,25 @@ import {
   type OfflineRegion,
   type LatLon,
 } from "@/src/utils/offlineMaps";
+import type { MapTileStyle } from "@/src/components/MapCanvas.types";
 
-const TOPO_TILE_URL = "https://a.tile.opentopomap.org/{z}/{x}/{y}.png";
+const DOWNLOAD_TILE_STYLES: Record<MapTileStyle, { urlTemplate: string; maximumZ: number; label: string }> = {
+  voyager: {
+    urlTemplate: "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+    maximumZ: 20,
+    label: "Стандартна",
+  },
+  topo: {
+    urlTemplate: "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
+    maximumZ: 17,
+    label: "Топографска",
+  },
+  satellite: {
+    urlTemplate: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    maximumZ: 19,
+    label: "Сателит",
+  },
+};
 const TILE_CACHE_PATH =
   Platform.OS !== "web" && FileSystem.cacheDirectory
     ? `${FileSystem.cacheDirectory}osm-tiles`
@@ -49,6 +66,7 @@ export default function OfflineMapsScreen() {
   const [center, setCenter] = useState<LatLon>({ latitude: 42.6977, longitude: 23.3219 });
   const [radiusKm, setRadiusKm] = useState(10);
   const [preset, setPreset] = useState<ZoomPreset>("walker");
+  const [downloadStyle, setDownloadStyle] = useState<MapTileStyle>("topo");
   const [searchText, setSearchText] = useState("");
   const [searching, setSearching] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -157,6 +175,7 @@ export default function OfflineMapsScreen() {
         center,
         radiusKm,
         preset,
+        style: downloadStyle,
         tileCount: tiles.length,
         approxSizeMb: approxMb,
       });
@@ -168,7 +187,7 @@ export default function OfflineMapsScreen() {
     } finally {
       setDownloading(false);
     }
-  }, [center, radiusKm, preset, regionName, approxMb, loadRegions]);
+  }, [center, radiusKm, preset, downloadStyle, regionName, approxMb, loadRegions]);
 
   const handleJumpToRegion = useCallback((region: OfflineRegion) => {
     setCenter(region.center);
@@ -243,8 +262,9 @@ export default function OfflineMapsScreen() {
           testID="offline-map-view"
         >
           <UrlTile
-            urlTemplate={TOPO_TILE_URL}
-            maximumZ={17}
+            key={downloadStyle}
+            urlTemplate={DOWNLOAD_TILE_STYLES[downloadStyle].urlTemplate}
+            maximumZ={DOWNLOAD_TILE_STYLES[downloadStyle].maximumZ}
             flipY={false}
             tileCachePath={TILE_CACHE_PATH}
             tileCacheMaxAge={60 * 60 * 24 * 30}
@@ -284,6 +304,22 @@ export default function OfflineMapsScreen() {
             >
               <Text style={[styles.pillText, preset === p && styles.pillTextActive]}>
                 {ZOOM_PRESETS[p].label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Text style={styles.sectionLabel}>Стил на картата за офлайн</Text>
+        <View style={styles.pillRow}>
+          {(Object.keys(DOWNLOAD_TILE_STYLES) as MapTileStyle[]).map((s) => (
+            <Pressable
+              key={s}
+              onPress={() => setDownloadStyle(s)}
+              style={[styles.pill, downloadStyle === s && styles.pillActive]}
+              testID={`download-style-${s}`}
+            >
+              <Text style={[styles.pillText, downloadStyle === s && styles.pillTextActive]}>
+                {DOWNLOAD_TILE_STYLES[s].label}
               </Text>
             </Pressable>
           ))}
@@ -329,7 +365,7 @@ export default function OfflineMapsScreen() {
                 >
                   <Text style={styles.regionName}>{r.name}</Text>
                   <Text style={styles.regionInfo}>
-                    {r.radiusKm} км · {ZOOM_PRESETS[r.preset].label} · ~{r.approxSizeMb} MB
+                    {r.radiusKm} км · {ZOOM_PRESETS[r.preset].label} · {DOWNLOAD_TILE_STYLES[r.style]?.label ?? "Топографска"} · ~{r.approxSizeMb} MB
                   </Text>
                 </Pressable>
                 <Pressable
