@@ -52,6 +52,7 @@ import { getDeviceId } from "@/src/utils/deviceId";
 import { reverseGeocode } from "@/src/utils/geocode";
 import * as Linking from "expo-linking";
 import GhostTrackPicker from "@/src/components/GhostTrackPicker";
+import Compass from "@/src/components/Compass";
 const MARKER_BUTTONS: {
   type: MarkerType;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
@@ -118,6 +119,7 @@ export default function HomeScreen() {
   const [ghostModalOpen, setGhostModalOpen] = useState(false);
   const [ghostVisible, setGhostVisible] = useState(true);
   const [mapStyle, setMapStyle] = useState<MapTileStyle>("topo");
+  const [compassVisible, setCompassVisible] = useState(false);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [distance, setDistance] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -820,6 +822,18 @@ try {
             <MaterialCommunityIcons name="crosshairs-gps" size={22} color={colors.brand} />
           </Pressable>
         )}
+
+        <Pressable
+          onPress={() => setCompassVisible((v) => !v)}
+          style={styles.compassBtn}
+          testID="compass-toggle-btn"
+        >
+          {compassVisible ? (
+            <Compass />
+          ) : (
+            <MaterialCommunityIcons name="compass-outline" size={22} color={colors.onSurfaceTertiary} />
+          )}
+        </Pressable>
       </View>
 
       <View style={[styles.controls, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
@@ -1203,6 +1217,19 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: spacing.lg,
     right: spacing.md,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(18,18,18,0.9)",
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  compassBtn: {
+    position: "absolute",
+    bottom: spacing.lg,
+    left: spacing.md,
     width: 48,
     height: 48,
     borderRadius: 24,
