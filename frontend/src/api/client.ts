@@ -47,7 +47,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  listTrips: (device_id?: string) => request<ApiTrip[]>(`/trips${device_id ? `?device_id=${device_id}` : ""}`),
+  listTrips: (device_id?: string, full?: boolean) => {
+    const params = new URLSearchParams();
+    if (device_id) params.set("device_id", device_id);
+    if (full) params.set("full", "true");
+    const qs = params.toString();
+    return request<ApiTrip[]>(`/trips${qs ? `?${qs}` : ""}`);
+  },
   getTrip: (id: string) => request<ApiTrip>(`/trips/${id}`),
   createTrip: (name?: string, device_id?: string, description?: string) =>
     request<ApiTrip>("/trips", {
