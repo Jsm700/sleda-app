@@ -14,6 +14,8 @@ import { StatusBar } from "expo-status-bar";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import MapView, { UrlTile, Marker, Region, PROVIDER_DEFAULT } from "react-native-maps";
+import * as FileSystem from "expo-file-system/legacy";
+import { Platform } from "react-native";
 import { colors, spacing, radius } from "@/src/theme/colors";
 import {
   tilesForRegion,
@@ -29,6 +31,10 @@ import {
 } from "@/src/utils/offlineMaps";
 
 const TOPO_TILE_URL = "https://a.tile.opentopomap.org/{z}/{x}/{y}.png";
+const TILE_CACHE_PATH =
+  Platform.OS !== "web" && FileSystem.cacheDirectory
+    ? `${FileSystem.cacheDirectory}osm-tiles`
+    : undefined;
 const RADIUS_OPTIONS = [5, 10, 20, 30];
 
 function sleep(ms: number) {
@@ -212,7 +218,13 @@ export default function OfflineMapsScreen() {
           onRegionChangeComplete={(r) => setCenter({ latitude: r.latitude, longitude: r.longitude })}
           testID="offline-map-view"
         >
-          <UrlTile urlTemplate={TOPO_TILE_URL} maximumZ={17} flipY={false} />
+          <UrlTile
+            urlTemplate={TOPO_TILE_URL}
+            maximumZ={17}
+            flipY={false}
+            tileCachePath={TILE_CACHE_PATH}
+            tileCacheMaxAge={60 * 60 * 24 * 30}
+          />
           <Marker coordinate={center} anchor={{ x: 0.5, y: 0.5 }}>
             <MaterialCommunityIcons name="map-marker" size={36} color={colors.brand} />
           </Marker>
