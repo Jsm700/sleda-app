@@ -224,36 +224,40 @@ export default function OfflineMapsScreen() {
   return (
     <View style={styles.root} testID="offline-maps-screen">
       <StatusBar style="light" />
-      <SafeAreaView edges={["top"]} style={styles.headerWrap}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.iconBtn} testID="offline-back-btn">
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.onSurface} />
+      {!fullscreen && (
+        <SafeAreaView edges={["top"]} style={styles.headerWrap}>
+          <View style={styles.header}>
+            <Pressable onPress={() => router.back()} style={styles.iconBtn} testID="offline-back-btn">
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.onSurface} />
+            </Pressable>
+            <Text style={styles.title}>Офлайн карти</Text>
+            <View style={{ width: 44 }} />
+          </View>
+        </SafeAreaView>
+      )}
+
+      {!fullscreen && (
+        <View style={styles.searchRow}>
+          <TextInput
+            style={styles.searchInput}
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="Търси място..."
+            placeholderTextColor={colors.onSurfaceTertiary}
+            onSubmitEditing={handleSearch}
+            testID="offline-search-input"
+          />
+          <Pressable style={styles.searchBtn} onPress={handleSearch} testID="offline-search-btn">
+            {searching ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <MaterialCommunityIcons name="magnify" size={20} color="#fff" />
+            )}
           </Pressable>
-          <Text style={styles.title}>Офлайн карти</Text>
-          <View style={{ width: 44 }} />
         </View>
-      </SafeAreaView>
+      )}
 
-      <View style={styles.searchRow}>
-        <TextInput
-          style={styles.searchInput}
-          value={searchText}
-          onChangeText={setSearchText}
-          placeholder="Търси място..."
-          placeholderTextColor={colors.onSurfaceTertiary}
-          onSubmitEditing={handleSearch}
-          testID="offline-search-input"
-        />
-        <Pressable style={styles.searchBtn} onPress={handleSearch} testID="offline-search-btn">
-          {searching ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <MaterialCommunityIcons name="magnify" size={20} color="#fff" />
-          )}
-        </Pressable>
-      </View>
-
-      <View style={[styles.mapWrap, fullscreen && styles.mapWrapFullscreen]}>
+      <View style={[styles.mapWrap, fullscreen && styles.mapWrapFullscreen, fullscreen && { paddingTop: insets.top }]}>
         <MapView
           ref={mapRef}
           provider={PROVIDER_DEFAULT}
@@ -303,6 +307,7 @@ export default function OfflineMapsScreen() {
         </Pressable>
       </View>
 
+      {!fullscreen && (
       <ScrollView
         style={styles.panel}
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, spacing.lg) }}
@@ -408,6 +413,7 @@ export default function OfflineMapsScreen() {
           </>
         )}
       </ScrollView>
+      )}
     </View>
   );
 }
@@ -448,13 +454,8 @@ const styles = StyleSheet.create({
   },
   mapWrap: { height: 260, backgroundColor: colors.surfaceTertiary, position: "relative" },
   mapWrapFullscreen: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
     height: undefined,
-    zIndex: 10,
+    flex: 1,
   },
   fullscreenBtn: {
     position: "absolute",
