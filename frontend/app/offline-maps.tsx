@@ -279,6 +279,18 @@ export default function OfflineMapsScreen() {
           </Marker>
         </MapView>
         <Pressable
+          onPress={() => {
+            mapRef.current?.animateToRegion(
+              { latitude: center.latitude, longitude: center.longitude, latitudeDelta: 0.05, longitudeDelta: 0.05 },
+              500,
+            );
+          }}
+          style={[styles.recenterPinBtn, { bottom: Math.max(insets.bottom, spacing.sm) + spacing.sm }]}
+          testID="recenter-pin-btn"
+        >
+          <MaterialCommunityIcons name="map-marker-radius" size={20} color={colors.brand} />
+        </Pressable>
+        <Pressable
           onPress={() => setFullscreen((v) => !v)}
           style={[styles.fullscreenBtn, { bottom: Math.max(insets.bottom, spacing.sm) + spacing.sm }]}
           testID="fullscreen-toggle-btn"
@@ -447,6 +459,18 @@ const styles = StyleSheet.create({
   fullscreenBtn: {
     position: "absolute",
     right: spacing.sm,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(18,18,18,0.9)",
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  recenterPinBtn: {
+    position: "absolute",
+    right: spacing.sm + 48,
     width: 40,
     height: 40,
     borderRadius: 20,
