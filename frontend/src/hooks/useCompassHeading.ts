@@ -35,7 +35,7 @@ export function useCompassHeading() {
           my * Math.cos(roll) -
           mz * Math.sin(roll) * Math.cos(pitch);
 
-        let deg = Math.atan2(yh, xh) * (180 / Math.PI);
+        let deg = Math.atan2(-xh, yh) * (180 / Math.PI);
         deg = deg < 0 ? deg + 360 : deg;
         setHeading(deg);
         setFieldStrength(Math.sqrt(mx * mx + my * my + mz * mz));
