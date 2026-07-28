@@ -13,7 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { StatusBar } from "expo-status-bar";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
-import MapView, { UrlTile, Region, PROVIDER_DEFAULT } from "react-native-maps";
+import MapView, { UrlTile, Marker, Region, PROVIDER_DEFAULT } from "react-native-maps";
 import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 import { colors, spacing, radius } from "@/src/theme/colors";
@@ -259,7 +259,7 @@ export default function OfflineMapsScreen() {
           provider={PROVIDER_DEFAULT}
           style={{ flex: 1 }}
           initialRegion={initialRegion}
-          onRegionChangeComplete={(r) => setCenter({ latitude: r.latitude, longitude: r.longitude })}
+          onPress={(e) => setCenter(e.nativeEvent.coordinate)}
           testID="offline-map-view"
         >
           <UrlTile
@@ -270,13 +270,14 @@ export default function OfflineMapsScreen() {
             tileCachePath={TILE_CACHE_PATH}
             tileCacheMaxAge={60 * 60 * 24 * 30}
           />
+          {/* Real geo-anchored pin: stays fixed on the chosen point (search
+              result or tap) and naturally moves across the screen as you
+              pan/zoom to inspect the area - it does NOT redefine the
+              download center just because you're looking around. */}
+          <Marker coordinate={center} anchor={{ x: 0.5, y: 1 }}>
+            <MaterialCommunityIcons name="map-marker" size={36} color={colors.brand} />
+          </Marker>
         </MapView>
-        {/* Fixed screen-center crosshair, not a map Marker - stays visually
-            centered during any pan/zoom gesture instead of lagging behind
-            a geo-anchored pin. */}
-        <View style={styles.centerPin} pointerEvents="none">
-          <MaterialCommunityIcons name="map-marker" size={36} color={colors.brand} />
-        </View>
         <Pressable
           onPress={() => setFullscreen((v) => !v)}
           style={[styles.fullscreenBtn, { bottom: Math.max(insets.bottom, spacing.sm) + spacing.sm }]}
@@ -454,13 +455,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
-  },
-  centerPin: {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    marginLeft: -18,
-    marginTop: -36,
   },
   panel: { flex: 1, padding: spacing.md },
   sectionLabel: { color: colors.onSurfaceTertiary, fontSize: 12, fontWeight: "800", textTransform: "uppercase", marginBottom: spacing.xs },
