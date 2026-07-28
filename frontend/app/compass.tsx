@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Magnetometer } from "expo-sensors";
+import { useCompassHeading } from "@/src/hooks/useCompassHeading";
 import { colors, spacing, radius } from "@/src/theme/colors";
 
 const DIAL_SIZE = 320;
@@ -18,19 +17,7 @@ function cardinalFor(deg: number): string {
 
 export default function CompassScreen() {
   const router = useRouter();
-  const [heading, setHeading] = useState(0);
-  const [fieldStrength, setFieldStrength] = useState(0);
-
-  useEffect(() => {
-    Magnetometer.setUpdateInterval(150);
-    const sub = Magnetometer.addListener(({ x, y, z }: { x: number; y: number; z: number }) => {
-      let angle = Math.atan2(x, y) * (180 / Math.PI);
-      angle = angle < 0 ? angle + 360 : angle;
-      setHeading(angle);
-      setFieldStrength(Math.sqrt(x * x + y * y + z * z));
-    });
-    return () => sub.remove();
-  }, []);
+  const { heading, fieldStrength } = useCompassHeading();
 
   const ticks = Array.from({ length: 24 }, (_, i) => i * 15);
   const labels: { deg: number; text: string }[] = [
