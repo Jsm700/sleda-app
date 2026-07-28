@@ -825,6 +825,7 @@ try {
 
         <Pressable
           onPress={() => setCompassVisible((v) => !v)}
+          onLongPress={() => router.push("/compass")}
           style={styles.compassBtn}
           testID="compass-toggle-btn"
         >
