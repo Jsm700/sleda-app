@@ -48,10 +48,15 @@ const DOWNLOAD_TILE_STYLES: Record<MapTileStyle, { urlTemplate: string; maximumZ
     label: "Сателит",
   },
 };
-const TILE_CACHE_PATH =
-  Platform.OS !== "web" && FileSystem.cacheDirectory
-    ? `${FileSystem.cacheDirectory}osm-tiles`
+// Must match MapCanvas.tsx's per-style cache path scheme exactly, so
+// tiles downloaded here land in the same folder the main map reads from
+// for that style - and so different styles never collide in one shared
+// cache (tileCachePath keys by z/x/y coordinate only, not by URL).
+function tileCachePathFor(style: string): string | undefined {
+  return Platform.OS !== "web" && FileSystem.cacheDirectory
+    ? `${FileSystem.cacheDirectory}osm-tiles-${style}`
     : undefined;
+}
 const RADIUS_OPTIONS = [5, 10, 20, 30];
 
 function sleep(ms: number) {
@@ -271,7 +276,7 @@ export default function OfflineMapsScreen() {
             urlTemplate={DOWNLOAD_TILE_STYLES[downloadStyle].urlTemplate}
             maximumZ={DOWNLOAD_TILE_STYLES[downloadStyle].maximumZ}
             flipY={false}
-            tileCachePath={TILE_CACHE_PATH}
+            tileCachePath={tileCachePathFor(downloadStyle)}
             tileCacheMaxAge={60 * 60 * 24 * 30}
           />
           {/* Real geo-anchored pin: stays fixed on the chosen point (search
