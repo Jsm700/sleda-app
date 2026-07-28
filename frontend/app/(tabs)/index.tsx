@@ -771,14 +771,14 @@ try {
               style={styles.offlineMapsBtn}
               testID="offline-maps-btn"
             >
-              <MaterialCommunityIcons name="cloud-download-outline" size={16} color={colors.onSurfaceTertiary} />
+              <MaterialCommunityIcons name="cloud-download-outline" size={18} color={colors.onSurface} />
               <Text style={styles.mapStyleBtnText}>Офлайн карти</Text>
             </Pressable>
             <Pressable onPress={cycleMapStyle} style={styles.mapStyleBtn} testID="map-style-btn">
               <MaterialCommunityIcons
                 name={mapStyle === "voyager" ? "map-outline" : mapStyle === "topo" ? "terrain" : "satellite-variant"}
-                size={16}
-                color={colors.onSurfaceTertiary}
+                size={18}
+                color={colors.onSurface}
               />
               <Text style={styles.mapStyleBtnText}>
                 {mapStyle === "voyager" ? "Стандартна" : mapStyle === "topo" ? "Топографска" : "Сателит"}
@@ -1180,25 +1180,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(18,18,18,0.85)",
+    backgroundColor: "rgba(18,18,18,0.92)",
     borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    borderWidth: 1.5,
+    borderColor: colors.brand,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   mapStyleBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(18,18,18,0.85)",
+    backgroundColor: "rgba(18,18,18,0.92)",
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    borderColor: colors.onSurfaceTertiary,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
-  mapStyleBtnText: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "700" },
+  mapStyleBtnText: { color: colors.onSurface, fontSize: 13, fontWeight: "800" },
   recordingText: { color: "#fff", fontSize: 12, fontWeight: "800", letterSpacing: 0.6 },
  langFloating: { position: "absolute", top: 0, right: spacing.md },
   langPill: {
@@ -1217,9 +1217,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: spacing.lg,
     right: spacing.md,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "rgba(18,18,18,0.9)",
     borderWidth: 1,
     borderColor: colors.border,
@@ -1230,9 +1230,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: spacing.lg,
     left: spacing.md,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "rgba(18,18,18,0.9)",
     borderWidth: 1,
     borderColor: colors.border,
