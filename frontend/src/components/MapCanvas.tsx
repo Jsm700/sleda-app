@@ -6,10 +6,16 @@ import MarkerPin from "./MarkerPin";
 
 import type { MapCanvasProps } from "./MapCanvas.types";
 
-const TILE_CACHE_PATH =
-  Platform.OS !== "web" && FileSystem.cacheDirectory
-    ? `${FileSystem.cacheDirectory}osm-tiles`
+// IMPORTANT: cache path must be unique PER STYLE. tileCachePath keys tiles
+// by z/x/y coordinate only, not by URL - so if different styles shared one
+// cache folder, a tile fetched once as e.g. satellite would be silently
+// reused for the same coordinate under topo/voyager later, producing a
+// patchwork of mismatched styles at different zoom levels.
+function tileCachePathFor(style: string): string | undefined {
+  return Platform.OS !== "web" && FileSystem.cacheDirectory
+    ? `${FileSystem.cacheDirectory}osm-tiles-${style}`
     : undefined;
+}
 
 const TILE_STYLES: Record<string, { urlTemplate: string; maximumZ: number }> = {
   voyager: {
@@ -36,7 +42,8 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
     latitudeDelta: initialRegion.latitudeDelta,
     longitudeDelta: initialRegion.longitudeDelta,
   };
-  const tile = TILE_STYLES[mapStyle ?? "voyager"] ?? TILE_STYLES.voyager;
+  const activeStyle = mapStyle ?? "voyager";
+  const tile = TILE_STYLES[activeStyle] ?? TILE_STYLES.voyager;
 
   return (
     <MapView
@@ -51,11 +58,11 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
       testID="map-view"
     >
       <UrlTile
-        key={mapStyle ?? "voyager"}
+        key={activeStyle}
         urlTemplate={tile.urlTemplate}
         maximumZ={tile.maximumZ}
         flipY={false}
-        tileCachePath={TILE_CACHE_PATH}
+        tileCachePath={tileCachePathFor(activeStyle)}
         tileCacheMaxAge={60 * 60 * 24 * 30}
       />
 
