@@ -1,6 +1,8 @@
-// Small live compass overlay using the phone's magnetometer.
-// Follows the classic red/black needle convention: red tip = north,
-// dark tip = south, so it's readable without extra labels.
+// Larger, higher-contrast live compass using the phone's magnetometer.
+// Classic convention: red tip = north, white tip = south (white instead
+// of literal black, since black would be invisible against our dark
+// circular button background - the point of the convention is a clearly
+// distinct pair of colors, which red/white preserves).
 // Note: raw magnetometer heading is a basic approximation (no tilt
 // compensation) - accuracy depends on how flat/level the phone is held
 // and can drift near metal objects. Good enough for general orientation,
@@ -33,14 +35,14 @@ export default function Compass() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: "center", justifyContent: "center", width: 28, height: 28 },
-  needle: { width: 6, height: 26, alignItems: "center" },
+  wrap: { alignItems: "center", justifyContent: "center", width: 44, height: 44 },
+  needle: { width: 12, height: 40, alignItems: "center" },
   northHalf: {
     width: 0,
     height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderBottomWidth: 13,
+    borderLeftWidth: 9,
+    borderRightWidth: 9,
+    borderBottomWidth: 20,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
     borderBottomColor: "#ef4444", // red = north
@@ -48,11 +50,11 @@ const styles = StyleSheet.create({
   southHalf: {
     width: 0,
     height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderTopWidth: 13,
+    borderLeftWidth: 9,
+    borderRightWidth: 9,
+    borderTopWidth: 20,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderTopColor: "#d4d4d4", // light/dark grey = south
+    borderTopColor: "#ffffff", // white = south (visible against dark button)
   },
 });
