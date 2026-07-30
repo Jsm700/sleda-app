@@ -33,7 +33,7 @@ const TILE_STYLES: Record<string, { urlTemplate: string; maximumZ: number }> = {
 };
 
 const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
- { initialRegion, route, ghostRoute, ghostMarkers, markers, brandColor, markerLabelFor, onMarkerPress, mapStyle },
+ { initialRegion, route, routeSegments, ghostRoute, ghostMarkers, markers, brandColor, markerLabelFor, onMarkerPress, mapStyle },
   ref,
 ) {
   const reg: Region = {
@@ -66,8 +66,22 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
         tileCacheMaxAge={60 * 60 * 24 * 30}
       />
 
-      {route.length > 1 && (
-        <Polyline coordinates={route} strokeColor={brandColor} strokeWidth={5} />
+      {routeSegments && routeSegments.length > 0 ? (
+        routeSegments.map((seg, i) =>
+          seg.points.length > 1 ? (
+            <Polyline
+              key={`seg-${i}`}
+              coordinates={seg.points}
+              strokeColor={seg.color}
+              strokeWidth={5}
+              lineDashPattern={seg.dashed ? [6, 6] : undefined}
+            />
+          ) : null,
+        )
+      ) : (
+        route.length > 1 && (
+          <Polyline coordinates={route} strokeColor={brandColor} strokeWidth={5} />
+        )
       )}
       {ghostRoute && ghostRoute.length > 1 && (
         <Polyline coordinates={ghostRoute} strokeColor="#FF00FF" strokeWidth={8} lineDashPattern={[8, 6]} />
