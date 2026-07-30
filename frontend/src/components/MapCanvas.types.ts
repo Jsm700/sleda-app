@@ -18,6 +18,12 @@ export type RoutePoint = {
   timestamp: number;
 };
 
+export type RouteSegmentDrawing = {
+  points: RoutePoint[];
+  color: string;
+  dashed?: boolean;
+};
+
 export type MapCanvasProps = {
   initialRegion: {
     latitude: number;
@@ -26,6 +32,7 @@ export type MapCanvasProps = {
     longitudeDelta: number;
   };
   route: RoutePoint[];
+  routeSegments?: RouteSegmentDrawing[];
   ghostRoute?: RoutePoint[];
   ghostMarkers?: MapMarker[];
   markers: MapMarker[];
