@@ -1047,7 +1047,10 @@ try {
         transparent
         onRequestClose={() => {}}
       >
-        <View style={styles.modalRoot}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalRoot}
+        >
           <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Записване на маршрут</Text>
@@ -1076,7 +1079,7 @@ try {
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal
