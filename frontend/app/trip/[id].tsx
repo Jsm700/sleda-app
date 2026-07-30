@@ -147,6 +147,31 @@ export default function TripDetailScreen() {
     photo: m.photo ?? null,
   }));
 
+  const segments = trip?.segments ?? [];
+  const routeSegmentsDrawing = segments.length > 0
+    ? segments.map((seg) => {
+        const startMs = new Date(seg.started_at).getTime();
+        const endMs = new Date(seg.ended_at).getTime();
+        return {
+          points: routePoints.filter((p) => p.timestamp >= startMs && p.timestamp <= endMs),
+          color: seg.type === "pause" ? colors.onSurfaceTertiary : colors.brand,
+          dashed: seg.type === "pause",
+        };
+      })
+    : undefined;
+
+  const pauseSegments = segments.filter((s) => s.type === "pause");
+  const moveSegments = segments.filter((s) => s.type === "move");
+  const hasPauses = pauseSegments.length > 0;
+  const pauseDurationS = pauseSegments.reduce(
+    (sum, s) => sum + Math.max(0, (new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000),
+    0,
+  );
+  const moveDurationS = moveSegments.reduce(
+    (sum, s) => sum + Math.max(0, (new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000),
+    0,
+  );
+
   return (
     <View style={styles.root} testID="trip-detail-screen">
       <StatusBar style="light" />
@@ -206,6 +231,7 @@ export default function TripDetailScreen() {
             ref={undefined as unknown as React.Ref<MapCanvasHandle>}
             initialRegion={initialRegion}
             route={routePoints}
+            routeSegments={routeSegmentsDrawing}
             markers={mapMarkers}
             brandColor={colors.brand}
             markerColorFor={(type) => MARKER_COLORS[type]}
@@ -240,6 +266,18 @@ export default function TripDetailScreen() {
               </Text>
             </View>
           </View>
+          {hasPauses && (
+            <View style={styles.segmentBreakdown} testID="segment-breakdown">
+              <View style={styles.segmentRow}>
+                <View style={styles.segmentDot} />
+                <Text style={styles.segmentText}>Движение: {formatDuration(moveDurationS)}</Text>
+              </View>
+              <View style={styles.segmentRow}>
+                <View style={[styles.segmentDot, styles.segmentDotPause]} />
+                <Text style={styles.segmentText}>Пауза: {formatDuration(pauseDurationS)}</Text>
+              </View>
+            </View>
+          )}
         </View>
       )}
    <Modal visible={!!selectedMarker} transparent animationType="fade" onRequestClose={() => setSelectedMarker(null)}>
@@ -295,6 +333,11 @@ const styles = StyleSheet.create({
   },
   date: { color: colors.onSurfaceSecondary, fontSize: 14, fontWeight: "700" },
   statsRow: { flexDirection: "row", gap: spacing.sm },
+  segmentBreakdown: { flexDirection: "row", gap: spacing.md, marginTop: spacing.xs },
+  segmentRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  segmentDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brand },
+  segmentDotPause: { backgroundColor: colors.onSurfaceTertiary },
+  segmentText: { color: colors.onSurfaceSecondary, fontSize: 12, fontWeight: "600" },
   statBlock: {
     flex: 1,
     backgroundColor: colors.surfaceSecondary,
