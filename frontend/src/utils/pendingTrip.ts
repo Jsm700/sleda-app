@@ -24,6 +24,7 @@ export type PendingTrip = {
     photo: string | null;
     timestamp: string;
   }[];
+  segments?: { type: "move" | "pause"; started_at: string; ended_at: string; distance_m: number }[];
   distance_m: number;
   duration_s: number;
 };
