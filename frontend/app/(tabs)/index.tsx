@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   Text,
@@ -53,18 +54,41 @@ import { reverseGeocode } from "@/src/utils/geocode";
 import * as Linking from "expo-linking";
 import GhostTrackPicker from "@/src/components/GhostTrackPicker";
 import Compass from "@/src/components/Compass";
-const MARKER_BUTTONS: {
+type MarkerButtonDef = {
   type: MarkerType;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   color: string;
   labelKey: TranslationKey;
-}[] = [
-  { type: "car", icon: "car", color: colors.markerCar, labelKey: "car" },
-  { type: "fish", icon: "fish", color: colors.markerFish, labelKey: "fish" },
+};
+
+const WALK_MARKER_BUTTONS: MarkerButtonDef[] = [
   { type: "mushroom", icon: "mushroom", color: colors.markerMushroom, labelKey: "mushroom" },
   { type: "hazard", icon: "alert", color: colors.markerHazard, labelKey: "hazard" },
   { type: "note", icon: "note-edit-outline", color: colors.info, labelKey: "note" },
 ];
+
+const BOAT_MARKER_BUTTONS: MarkerButtonDef[] = [
+  { type: "fish", icon: "fish", color: colors.markerFish, labelKey: "fish" },
+  { type: "hazard", icon: "alert", color: colors.markerHazard, labelKey: "hazard" },
+  { type: "note", icon: "note-edit-outline", color: colors.info, labelKey: "note" },
+];
+
+// Full coverage for ALL marker types (not just the ones with a button),
+// used for coloring/labeling markers already on the map - including the
+// auto-created start/end markers, which have no button of their own.
+const MARKER_META: Record<MarkerType, { color: string; labelKey: TranslationKey }> = {
+  car: { color: colors.markerCar, labelKey: "car" },
+  fish: { color: colors.markerFish, labelKey: "fish" },
+  mushroom: { color: colors.markerMushroom, labelKey: "mushroom" },
+  hazard: { color: colors.markerHazard, labelKey: "hazard" },
+  water: { color: colors.markerWater, labelKey: "water" },
+  poi: { color: colors.brand, labelKey: "poi" },
+  note: { color: colors.info, labelKey: "note" },
+  start: { color: colors.success, labelKey: "markerStart" },
+  end: { color: colors.error, labelKey: "markerEnd" },
+};
+
+const MODE_KEY = "sleda.mode";
 
 function distanceM(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }): number {
   const R = 6371000;
@@ -120,6 +144,7 @@ export default function HomeScreen() {
   const [ghostVisible, setGhostVisible] = useState(true);
   const [mapStyle, setMapStyle] = useState<MapTileStyle>("topo");
   const [compassVisible, setCompassVisible] = useState(false);
+  const [mode, setModeState] = useState<"walk" | "boat">("walk");
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [distance, setDistance] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -341,12 +366,25 @@ useEffect(() => {
       safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy));
       await clearStoredRoute();
       setRoute([]);
-      setMarkers([]);
-      markersRef.current = [];
       setDistance(0);
       setElapsed(0);
       startTimeRef.current = Date.now();
       setIsTracking(true);
+
+      if (currentLocation) {
+        const startMarker: MapMarker = {
+          id: `${Date.now()}-start`,
+          type: "start",
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          timestamp: Date.now(),
+        };
+        markersRef.current = [startMarker];
+        setMarkers([startMarker]);
+      } else {
+        markersRef.current = [];
+        setMarkers([]);
+      }
 try {
         const deviceId = await getDeviceId();
         const trip = await api.createTrip(undefined, deviceId);
@@ -413,6 +451,20 @@ try {
       longitude: p.longitude,
       timestamp: new Date(p.timestamp).toISOString(),
     }));
+
+    if (finalPoints.length > 0) {
+      const last = finalPoints[finalPoints.length - 1];
+      const endMarker: MapMarker = {
+        id: `${Date.now()}-end`,
+        type: "end",
+        latitude: last.latitude,
+        longitude: last.longitude,
+        timestamp: Date.now(),
+      };
+      markersRef.current = [...markersRef.current, endMarker];
+      setMarkers(markersRef.current);
+    }
+
     const finalMarkers = markersRef.current.map((m) => ({
       id: m.id,
       type: m.type,
@@ -683,6 +735,20 @@ try {
     setMapStyle((s) => (s === "voyager" ? "topo" : s === "topo" ? "satellite" : "voyager"));
   }, []);
 
+  useEffect(() => {
+    AsyncStorage.getItem(MODE_KEY).then((v) => {
+      if (v === "walk" || v === "boat") setModeState(v);
+    });
+  }, []);
+
+  const toggleMode = useCallback(() => {
+    setModeState((m) => {
+      const next = m === "walk" ? "boat" : "walk";
+      AsyncStorage.setItem(MODE_KEY, next).catch(() => {});
+      return next;
+    });
+  }, []);
+
   const handleRecenter = useCallback(() => {
     if (!currentLocation) return;
     mapRef.current?.animateToRegion(
@@ -697,14 +763,13 @@ try {
   }, [currentLocation]);
 
   const markerColorFor = useCallback(
-    (type: MarkerType) =>
-      MARKER_BUTTONS.find((b) => b.type === type)?.color ?? colors.brand,
+    (type: MarkerType) => MARKER_META[type]?.color ?? colors.brand,
     [],
   );
   const markerLabelFor = useCallback(
     (type: MarkerType) => {
-      const b = MARKER_BUTTONS.find((x) => x.type === type);
-      return b ? t(b.labelKey) : "";
+      const meta = MARKER_META[type];
+      return meta ? t(meta.labelKey) : "";
     },
     [t],
   );
@@ -838,8 +903,16 @@ try {
       </View>
 
       <View style={[styles.controls, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+        <Pressable onPress={toggleMode} style={styles.modeToggleBtn} testID="mode-toggle-btn">
+          <MaterialCommunityIcons
+            name={mode === "walk" ? "walk" : "sail-boat"}
+            size={16}
+            color={colors.onSurface}
+          />
+          <Text style={styles.modeToggleBtnText}>{mode === "walk" ? t("walkMode") : t("boatMode")}</Text>
+        </Pressable>
         <View style={styles.markerGrid}>
-          {MARKER_BUTTONS.map((btn) => (
+          {(mode === "walk" ? WALK_MARKER_BUTTONS : BOAT_MARKER_BUTTONS).map((btn) => (
             <Pressable
               key={btn.type}
               style={({ pressed }) => [
@@ -1282,6 +1355,20 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     gap: spacing.md,
   },
+  modeToggleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "center",
+    gap: 6,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    marginBottom: spacing.sm,
+  },
+  modeToggleBtnText: { color: colors.onSurface, fontSize: 13, fontWeight: "800" },
   markerGrid: { flexDirection: "row", justifyContent: "space-between", gap: spacing.xs },
   markerBtn: {
     flex: 1,
