@@ -72,6 +72,10 @@ const translations = {
     pendingDiscardCancel: "Отказ",
     uploadSuccess: "Маршрутът е качен успешно!",
     uploadFailed: "Все още няма връзка. Ще опитаме при следващо отваряне.",
+    markerStart: "Начало",
+    markerEnd: "Край",
+    walkMode: "Разходка",
+    boatMode: "Лодка",
   },
   en: {
     appName: "Sleda",
@@ -138,6 +142,10 @@ const translations = {
     pendingDiscardCancel: "Cancel",
     uploadSuccess: "Trip uploaded successfully!",
     uploadFailed: "Still no connection. We'll try again next time.",
+    markerStart: "Start",
+    markerEnd: "End",
+    walkMode: "Walk",
+    boatMode: "Boat",
   },
 } as const;
 
