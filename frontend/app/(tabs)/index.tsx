@@ -785,12 +785,9 @@ try {
     });
   }, []);
 
-  const toggleMode = useCallback(() => {
-    setModeState((m) => {
-      const next = m === "walk" ? "boat" : "walk";
-      AsyncStorage.setItem(MODE_KEY, next).catch(() => {});
-      return next;
-    });
+  const selectMode = useCallback((next: "walk" | "boat") => {
+    setModeState(next);
+    AsyncStorage.setItem(MODE_KEY, next).catch(() => {});
   }, []);
 
   const handleRecenter = useCallback(() => {
@@ -947,14 +944,24 @@ try {
       </View>
 
       <View style={[styles.controls, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        <Pressable onPress={toggleMode} style={styles.modeToggleBtn} testID="mode-toggle-btn">
-          <MaterialCommunityIcons
-            name={mode === "walk" ? "walk" : "sail-boat"}
-            size={16}
-            color={colors.onSurface}
-          />
-          <Text style={styles.modeToggleBtnText}>{mode === "walk" ? t("walkMode") : t("boatMode")}</Text>
-        </Pressable>
+        <View style={styles.modeRow}>
+          <Pressable
+            onPress={() => selectMode("walk")}
+            style={[styles.modePill, mode === "walk" && styles.modePillActive]}
+            testID="mode-walk-btn"
+          >
+            <MaterialCommunityIcons name="walk" size={16} color={mode === "walk" ? "#fff" : colors.onSurfaceTertiary} />
+            <Text style={[styles.modePillText, mode === "walk" && styles.modePillTextActive]}>{t("walkMode")}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => selectMode("boat")}
+            style={[styles.modePill, mode === "boat" && styles.modePillActive]}
+            testID="mode-boat-btn"
+          >
+            <MaterialCommunityIcons name="sail-boat" size={16} color={mode === "boat" ? "#fff" : colors.onSurfaceTertiary} />
+            <Text style={[styles.modePillText, mode === "boat" && styles.modePillTextActive]}>{t("boatMode")}</Text>
+          </Pressable>
+        </View>
         <View style={styles.markerGrid}>
           {(mode === "walk" ? WALK_MARKER_BUTTONS : BOAT_MARKER_BUTTONS).map((btn) => (
             <Pressable
@@ -1414,20 +1421,26 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     gap: spacing.md,
   },
-  modeToggleBtn: {
+  modeRow: {
+    flexDirection: "row",
+    alignSelf: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  modePill: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "center",
     gap: 6,
     backgroundColor: colors.surfaceSecondary,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    marginBottom: spacing.sm,
+    paddingVertical: 7,
+    paddingHorizontal: 16,
   },
-  modeToggleBtnText: { color: colors.onSurface, fontSize: 13, fontWeight: "800" },
+  modePillActive: { backgroundColor: colors.brand, borderColor: colors.brand },
+  modePillText: { color: colors.onSurfaceTertiary, fontSize: 13, fontWeight: "800" },
+  modePillTextActive: { color: "#fff" },
   markerGrid: { flexDirection: "row", justifyContent: "space-between", gap: spacing.xs },
   markerBtn: {
     flex: 1,
