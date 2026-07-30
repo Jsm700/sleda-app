@@ -38,6 +38,8 @@ const MARKER_COLORS: Record<MarkerType, string> = {
   water: colors.markerWater,
   poi: colors.info,
   note: colors.info,
+  start: colors.success,
+  end: colors.error,
 };
 
 export default function GpxImportScreen() {
