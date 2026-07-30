@@ -130,12 +130,17 @@ export default function HomeScreen() {
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tripIdRef = useRef<string | null>(null);
-  const pendingSaveRef = useRef<{ route: any[]; markers: any[]; distance: number; duration: number; endedAt: string } | null>(null);
+  const pendingSaveRef = useRef<{ route: any[]; markers: any[]; segments: any[]; distance: number; duration: number; endedAt: string } | null>(null);
   const markersRef = useRef<MapMarker[]>([]);
+  const segmentsRef = useRef<{ type: "move" | "pause"; started_at: string; ended_at: string; distance_m: number }[]>([]);
+  const segmentStartTimeRef = useRef<number | null>(null);
+  const segmentStartDistanceRef = useRef<number>(0);
+  const currentSegmentTypeRef = useRef<"move" | "pause">("move");
 
   const [permissionStatus, setPermissionStatus] = useState<Location.PermissionStatus | null>(null);
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObjectCoords | null>(null);
   const [isTracking, setIsTracking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [route, setRoute] = useState<RoutePoint[]>([]);
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [ghostRoute, setGhostRoute] = useState<RoutePoint[]>([]);
@@ -228,6 +233,7 @@ export default function HomeScreen() {
           ended_at: pending.endedAt,
           route: pending.route,
           markers: pending.markers,
+          segments: pending.segments,
           distance_m: pending.distance_m,
           duration_s: pending.duration_s,
         });
@@ -370,6 +376,11 @@ useEffect(() => {
       setElapsed(0);
       startTimeRef.current = Date.now();
       setIsTracking(true);
+      setIsPaused(false);
+      segmentsRef.current = [];
+      currentSegmentTypeRef.current = "move";
+      segmentStartTimeRef.current = Date.now();
+      segmentStartDistanceRef.current = 0;
 
       if (currentLocation) {
         const startMarker: MapMarker = {
@@ -475,13 +486,25 @@ try {
       timestamp: new Date(m.timestamp).toISOString(),
     }));
 
+    const finalSegments = [
+      ...segmentsRef.current,
+      {
+        type: currentSegmentTypeRef.current,
+        started_at: new Date(segmentStartTimeRef.current ?? Date.now()).toISOString(),
+        ended_at: new Date().toISOString(),
+        distance_m: Math.max(0, finalDistance - segmentStartDistanceRef.current),
+      },
+    ];
+
     setIsTracking(false);
+    setIsPaused(false);
     setRoute(finalPoints);
     setDistance(finalDistance);
 
     pendingSaveRef.current = {
       route: finalRoute,
       markers: finalMarkers,
+      segments: finalSegments,
       distance: finalDistance,
       duration: finalDurationS,
       endedAt: new Date().toISOString(),
@@ -540,6 +563,25 @@ try {
     pendingSaveRef.current = null;
   }, [safeHaptic, stopPolling]);
 
+  const togglePause = useCallback(() => {
+    const now = Date.now();
+    const segDistance = Math.max(0, distance - segmentStartDistanceRef.current);
+    segmentsRef.current = [
+      ...segmentsRef.current,
+      {
+        type: currentSegmentTypeRef.current,
+        started_at: new Date(segmentStartTimeRef.current ?? now).toISOString(),
+        ended_at: new Date(now).toISOString(),
+        distance_m: segDistance,
+      },
+    ];
+    currentSegmentTypeRef.current = currentSegmentTypeRef.current === "move" ? "pause" : "move";
+    segmentStartTimeRef.current = now;
+    segmentStartDistanceRef.current = distance;
+    setIsPaused((p) => !p);
+    safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
+  }, [distance, safeHaptic]);
+
   const handleStopConfirmSave = useCallback(() => {
     setStopConfirmOpen(false);
     finalizeStopForSave();
@@ -580,6 +622,7 @@ try {
         ended_at: pending.endedAt,
         route: pending.route,
         markers: pending.markers,
+        segments: pending.segments,
         distance_m: pending.distance,
         duration_s: pending.duration,
       });
@@ -592,6 +635,7 @@ try {
         endedAt: pending.endedAt,
         route: pending.route,
         markers: pending.markers,
+        segments: pending.segments,
         distance_m: pending.distance,
         duration_s: pending.duration,
       });
@@ -852,9 +896,9 @@ try {
           </View>
 
           {isTracking && (
-            <View style={styles.recordingBadge} pointerEvents="none">
-              <View style={styles.recordingDot} />
-              <Text style={styles.recordingText}>{t("tracking")}</Text>
+            <View style={[styles.recordingBadge, isPaused && styles.recordingBadgePaused]} pointerEvents="none">
+              <View style={[styles.recordingDot, isPaused && styles.recordingDotPaused]} />
+              <Text style={styles.recordingText}>{isPaused ? "На пауза" : t("tracking")}</Text>
             </View>
           )}
   
@@ -931,6 +975,16 @@ try {
           ))}
         </View>
 
+        {isTracking && (
+          <Pressable onPress={togglePause} style={[styles.ghostBtn, isPaused && styles.ghostBtnActive]} testID="pause-resume-btn">
+            <MaterialCommunityIcons
+              name={isPaused ? "play" : "pause"}
+              size={24}
+              color={isPaused ? colors.error : colors.onSurface}
+            />
+            <Text style={styles.markerLabel}>{isPaused ? "Продължи" : "Пауза"}</Text>
+          </Pressable>
+        )}
         <Pressable
           onPress={() => {
             if (ghostRoute.length === 0) {
@@ -1248,6 +1302,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#fff" },
+  recordingBadgePaused: { backgroundColor: "rgba(120,120,120,0.95)" },
+  recordingDotPaused: { backgroundColor: "#e5e5e5" },
   topButtonsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
