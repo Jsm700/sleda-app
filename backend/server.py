@@ -67,6 +67,16 @@ class RoutePoint(BaseModel):
     timestamp: str
 
 
+SegmentType = Literal["move", "pause"]
+
+
+class Segment(BaseModel):
+    type: SegmentType
+    started_at: str
+    ended_at: str
+    distance_m: float = 0.0
+
+
 class Trip(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: Optional[str] = None
@@ -76,6 +86,7 @@ class Trip(BaseModel):
     ended_at: Optional[str] = None
     route: List[RoutePoint] = Field(default_factory=list)
     markers: List[Marker] = Field(default_factory=list)
+    segments: List[Segment] = Field(default_factory=list)
     distance_m: float = 0.0
     duration_s: int = 0
 
@@ -92,6 +103,7 @@ class TripUpdate(BaseModel):
     ended_at: Optional[str] = None
     route: Optional[List[RoutePoint]] = None
     markers: Optional[List[Marker]] = None
+    segments: Optional[List[Segment]] = None
     distance_m: Optional[float] = None
     duration_s: Optional[int] = None
 
