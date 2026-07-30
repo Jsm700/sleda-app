@@ -14,6 +14,8 @@ const ICONS: Record<MarkerType, keyof typeof MaterialCommunityIcons.glyphMap> = 
   water: "water",
   poi: "map-marker",
   note: "note-edit-outline",
+  start: "flag-outline",
+  end: "flag-checkered",
 };
 
 const COLORS: Record<MarkerType, string> = {
@@ -24,6 +26,8 @@ const COLORS: Record<MarkerType, string> = {
   water: colors.markerWater,
   poi: colors.brand,
   note: colors.info,
+  start: colors.success,
+  end: colors.error,
 };
 
 export default function MarkerPin({ type, size = 36 }: { type: MarkerType; size?: number }) {
