@@ -27,6 +27,8 @@ const MARKER_LABEL: Record<string, string> = {
   hazard: "Hazard",
   water: "Water",
   note: "Note",
+  start: "Start",
+  end: "End",
 };
 
 export function buildGpx(trip: ApiTrip): string {
