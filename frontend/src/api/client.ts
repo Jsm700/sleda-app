@@ -21,6 +21,13 @@ export type ApiRoutePoint = {
   timestamp: string;
 };
 
+export type ApiSegment = {
+  type: "move" | "pause";
+  started_at: string;
+  ended_at: string;
+  distance_m: number;
+};
+
 export type ApiTrip = {
   id: string;
   name?: string | null;
@@ -29,6 +36,7 @@ export type ApiTrip = {
   ended_at?: string | null;
   route: ApiRoutePoint[];
   markers: ApiMarker[];
+  segments?: ApiSegment[];
   distance_m: number;
   duration_s: number;
 };
