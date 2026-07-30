@@ -21,6 +21,8 @@ const MARKER_COLORS: Record<MarkerType, string> = {
   water: colors.markerWater,
   poi: colors.brand,
   note: colors.info,
+  start: colors.success,
+  end: colors.error,
 };
 
 const MARKER_LABELS_BG: Record<MarkerType, string> = {
@@ -31,6 +33,8 @@ const MARKER_LABELS_BG: Record<MarkerType, string> = {
   water: "Чешма",
   poi: "Маркер",
   note: "Бележка",
+  start: "Начало",
+  end: "Край",
 };
 const MARKER_LABELS_EN: Record<MarkerType, string> = {
   car: "Car / Boat",
@@ -40,6 +44,8 @@ const MARKER_LABELS_EN: Record<MarkerType, string> = {
   water: "Water",
   poi: "Marker",
   note: "Note",
+  start: "Start",
+  end: "End",
 };
 
 export default function TripDetailScreen() {
