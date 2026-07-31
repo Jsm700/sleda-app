@@ -382,12 +382,22 @@ useEffect(() => {
       segmentStartTimeRef.current = Date.now();
       segmentStartDistanceRef.current = 0;
 
-      if (currentLocation) {
+      let startCoords = currentLocation;
+      if (!startCoords) {
+        try {
+          const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+          startCoords = fresh.coords;
+          setCurrentLocation(fresh.coords);
+        } catch (e) {
+          console.warn("could not get fresh location for start marker", e);
+        }
+      }
+      if (startCoords) {
         const startMarker: MapMarker = {
           id: `${Date.now()}-start`,
           type: "start",
-          latitude: currentLocation.latitude,
-          longitude: currentLocation.longitude,
+          latitude: startCoords.latitude,
+          longitude: startCoords.longitude,
           timestamp: Date.now(),
         };
         markersRef.current = [startMarker];
