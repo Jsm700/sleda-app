@@ -72,8 +72,12 @@ export default function GhostTrackPicker({ onSelect, onClear }: Props) {
               onSelect(mappedRoute, mappedMarkers);
             }}
           >
-            <Text style={styles.tripDate}>{new Date(trip.started_at).toLocaleDateString("bg-BG")}</Text>
-            <Text style={styles.tripInfo}>{(trip.distance_m / 1000).toFixed(2)} km · {trip.route.length} точки</Text>
+            <Text style={styles.tripDate}>
+              {trip.name?.trim() || new Date(trip.started_at).toLocaleDateString("bg-BG")}
+            </Text>
+            <Text style={styles.tripInfo}>
+              {new Date(trip.started_at).toLocaleDateString("bg-BG")} · {(trip.distance_m / 1000).toFixed(2)} km · {trip.route.length} точки
+            </Text>
           </Pressable>
           <Pressable
             style={styles.deleteTripBtn}
