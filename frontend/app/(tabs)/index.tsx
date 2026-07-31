@@ -67,9 +67,13 @@ Notifications.setNotificationHandler({
   }),
 });
 
-const SHORE_ALERT_DISTANCE_M = 200;
 const SHORE_CHECK_INTERVAL_MS = 30000;
 const SHORE_ALERT_COOLDOWN_MS = 5 * 60 * 1000;
+const SHORE_ALERT_SETTINGS_KEY = "sleda.shore_alert_settings";
+
+type ShoreAlertMode = "off" | "closer" | "farther";
+const CLOSER_PRESETS_M = [50, 100, 200, 500];
+const FARTHER_PRESETS_KM = [1, 5, 10, 20];
 type MarkerButtonDef = {
   type: MarkerType;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
@@ -158,6 +162,9 @@ export default function HomeScreen() {
   const [isTracking, setIsTracking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [distanceToShore, setDistanceToShore] = useState<number | null>(null);
+  const [shoreAlertMode, setShoreAlertMode] = useState<ShoreAlertMode>("off");
+  const [shoreAlertThresholdM, setShoreAlertThresholdM] = useState<number>(200);
+  const [shoreSettingsOpen, setShoreSettingsOpen] = useState(false);
   const lastShoreAlertRef = useRef<number>(0);
   const [route, setRoute] = useState<RoutePoint[]>([]);
   const [markers, setMarkers] = useState<MapMarker[]>([]);
@@ -812,6 +819,22 @@ try {
       if (v === "walk" || v === "boat") setModeState(v);
     });
     Notifications.requestPermissionsAsync().catch(() => {});
+    AsyncStorage.getItem(SHORE_ALERT_SETTINGS_KEY).then((raw) => {
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.mode === "off" || parsed.mode === "closer" || parsed.mode === "farther") {
+          setShoreAlertMode(parsed.mode);
+        }
+        if (typeof parsed.thresholdM === "number") setShoreAlertThresholdM(parsed.thresholdM);
+      } catch {}
+    });
+  }, []);
+
+  const saveShoreAlertSettings = useCallback((mode: ShoreAlertMode, thresholdM: number) => {
+    setShoreAlertMode(mode);
+    setShoreAlertThresholdM(thresholdM);
+    AsyncStorage.setItem(SHORE_ALERT_SETTINGS_KEY, JSON.stringify({ mode, thresholdM })).catch(() => {});
   }, []);
 
   const selectMode = useCallback((next: "walk" | "boat") => {
@@ -824,7 +847,7 @@ try {
   // if we drift within alert range, with a cooldown so it doesn't repeat
   // every 30s once already close to shore.
   useEffect(() => {
-    if (mode !== "boat" || !isTracking || isPaused || !currentLocation) {
+    if (mode !== "boat" || !isTracking || isPaused || !currentLocation || shoreAlertMode === "off") {
       return;
     }
     let cancelled = false;
@@ -838,16 +861,18 @@ try {
         if (cancelled || dist === null) return;
         setDistanceToShore(dist);
         const now = Date.now();
-        if (
-          dist <= SHORE_ALERT_DISTANCE_M &&
-          now - lastShoreAlertRef.current > SHORE_ALERT_COOLDOWN_MS
-        ) {
+        const triggered =
+          shoreAlertMode === "closer"
+            ? dist <= shoreAlertThresholdM
+            : dist >= shoreAlertThresholdM;
+        if (triggered && now - lastShoreAlertRef.current > SHORE_ALERT_COOLDOWN_MS) {
           lastShoreAlertRef.current = now;
           safeHaptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning));
+          const distText = dist < 1000 ? `${Math.round(dist)} м` : `${(dist / 1000).toFixed(1)} км`;
           await Notifications.scheduleNotificationAsync({
             content: {
-              title: "Наближаваш брега",
-              body: `~${Math.round(dist)} м до брега`,
+              title: shoreAlertMode === "closer" ? "Наближаваш брега" : "Отдалечаваш се от брега",
+              body: `${distText} до брега`,
               sound: true,
             },
             trigger: null,
@@ -864,7 +889,7 @@ try {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [mode, isTracking, isPaused, currentLocation, safeHaptic]);
+  }, [mode, isTracking, isPaused, currentLocation, safeHaptic, shoreAlertMode, shoreAlertThresholdM]);
 
   const handleRecenter = useCallback(() => {
     if (!currentLocation) return;
@@ -975,13 +1000,20 @@ try {
             </View>
           )}
 
-          {mode === "boat" && isTracking && distanceToShore !== null && (
-            <View style={styles.shoreBadge} pointerEvents="none">
+          {mode === "boat" && (
+            <Pressable
+              onPress={() => setShoreSettingsOpen(true)}
+              style={styles.shoreBadge}
+              testID="shore-alert-settings-btn"
+            >
               <MaterialCommunityIcons name="waves" size={14} color={colors.onSurfaceTertiary} />
               <Text style={styles.shoreBadgeText}>
-                {distanceToShore < 1000 ? `${Math.round(distanceToShore)} м` : `${(distanceToShore / 1000).toFixed(1)} км`} до брега
+                {isTracking && distanceToShore !== null
+                  ? `${distanceToShore < 1000 ? `${Math.round(distanceToShore)} м` : `${(distanceToShore / 1000).toFixed(1)} км`} до брега`
+                  : "Известия за брега"}
               </Text>
-            </View>
+              <MaterialCommunityIcons name="cog-outline" size={12} color={colors.onSurfaceTertiary} />
+            </Pressable>
           )}
   
         </SafeAreaView>
@@ -1349,6 +1381,80 @@ try {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <Modal
+        visible={shoreSettingsOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShoreSettingsOpen(false)}
+      >
+        <View style={styles.modalRoot}>
+          <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Известия за брега</Text>
+              <Pressable onPress={() => setShoreSettingsOpen(false)} style={styles.modalClose}>
+                <MaterialCommunityIcons name="close" size={24} color={colors.onSurface} />
+              </Pressable>
+            </View>
+
+            <Text style={styles.stopFieldLabel}>Кога да ме известиш</Text>
+            <View style={styles.pillRowWrap}>
+              <Pressable
+                onPress={() => saveShoreAlertSettings("off", shoreAlertThresholdM)}
+                style={[styles.smallPill, shoreAlertMode === "off" && styles.smallPillActive]}
+              >
+                <Text style={[styles.smallPillText, shoreAlertMode === "off" && styles.smallPillTextActive]}>Изключено</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => saveShoreAlertSettings("closer", CLOSER_PRESETS_M.includes(shoreAlertThresholdM) ? shoreAlertThresholdM : 200)}
+                style={[styles.smallPill, shoreAlertMode === "closer" && styles.smallPillActive]}
+              >
+                <Text style={[styles.smallPillText, shoreAlertMode === "closer" && styles.smallPillTextActive]}>При приближаване</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => saveShoreAlertSettings("farther", FARTHER_PRESETS_KM.includes(shoreAlertThresholdM / 1000) ? shoreAlertThresholdM : 10000)}
+                style={[styles.smallPill, shoreAlertMode === "farther" && styles.smallPillActive]}
+              >
+                <Text style={[styles.smallPillText, shoreAlertMode === "farther" && styles.smallPillTextActive]}>При отдалечаване</Text>
+              </Pressable>
+            </View>
+
+            {shoreAlertMode === "closer" && (
+              <>
+                <Text style={styles.stopFieldLabel}>На какво разстояние</Text>
+                <View style={styles.pillRowWrap}>
+                  {CLOSER_PRESETS_M.map((m) => (
+                    <Pressable
+                      key={m}
+                      onPress={() => saveShoreAlertSettings("closer", m)}
+                      style={[styles.smallPill, shoreAlertThresholdM === m && styles.smallPillActive]}
+                    >
+                      <Text style={[styles.smallPillText, shoreAlertThresholdM === m && styles.smallPillTextActive]}>{m} м</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {shoreAlertMode === "farther" && (
+              <>
+                <Text style={styles.stopFieldLabel}>На какво разстояние</Text>
+                <View style={styles.pillRowWrap}>
+                  {FARTHER_PRESETS_KM.map((km) => (
+                    <Pressable
+                      key={km}
+                      onPress={() => saveShoreAlertSettings("farther", km * 1000)}
+                      style={[styles.smallPill, shoreAlertThresholdM === km * 1000 && styles.smallPillActive]}
+                    >
+                      <Text style={[styles.smallPillText, shoreAlertThresholdM === km * 1000 && styles.smallPillTextActive]}>{km} км</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1589,6 +1695,18 @@ const styles = StyleSheet.create({
   modalTitle: { color: colors.onSurface, fontSize: 20, fontWeight: "900" },
   modalClose: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   stopFieldLabel: { color: colors.onSurfaceTertiary, fontSize: 13, fontWeight: "700" },
+  pillRowWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.xs, marginBottom: spacing.md },
+  smallPill: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSecondary,
+  },
+  smallPillActive: { backgroundColor: colors.brand, borderColor: colors.brand },
+  smallPillText: { color: colors.onSurface, fontWeight: "700", fontSize: 13 },
+  smallPillTextActive: { color: "#fff" },
   stopInput: {
     backgroundColor: colors.surfaceSecondary,
     borderRadius: radius.md,
