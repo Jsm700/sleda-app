@@ -54,6 +54,22 @@ import { reverseGeocode } from "@/src/utils/geocode";
 import * as Linking from "expo-linking";
 import GhostTrackPicker from "@/src/components/GhostTrackPicker";
 import Compass from "@/src/components/Compass";
+import * as Notifications from "expo-notifications";
+import { getDistanceToShore } from "@/src/utils/coastline";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+const SHORE_ALERT_DISTANCE_M = 200;
+const SHORE_CHECK_INTERVAL_MS = 30000;
+const SHORE_ALERT_COOLDOWN_MS = 5 * 60 * 1000;
 type MarkerButtonDef = {
   type: MarkerType;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
@@ -141,6 +157,8 @@ export default function HomeScreen() {
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObjectCoords | null>(null);
   const [isTracking, setIsTracking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [distanceToShore, setDistanceToShore] = useState<number | null>(null);
+  const lastShoreAlertRef = useRef<number>(0);
   const [route, setRoute] = useState<RoutePoint[]>([]);
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [ghostRoute, setGhostRoute] = useState<RoutePoint[]>([]);
@@ -793,12 +811,60 @@ try {
     AsyncStorage.getItem(MODE_KEY).then((v) => {
       if (v === "walk" || v === "boat") setModeState(v);
     });
+    Notifications.requestPermissionsAsync().catch(() => {});
   }, []);
 
   const selectMode = useCallback((next: "walk" | "boat") => {
     setModeState(next);
     AsyncStorage.setItem(MODE_KEY, next).catch(() => {});
   }, []);
+
+  // Boat-mode only: periodically check distance to the nearest coastline
+  // and fire a local notification (with system sound, works fully offline)
+  // if we drift within alert range, with a cooldown so it doesn't repeat
+  // every 30s once already close to shore.
+  useEffect(() => {
+    if (mode !== "boat" || !isTracking || isPaused || !currentLocation) {
+      return;
+    }
+    let cancelled = false;
+
+    const check = async () => {
+      try {
+        const dist = await getDistanceToShore({
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+        });
+        if (cancelled || dist === null) return;
+        setDistanceToShore(dist);
+        const now = Date.now();
+        if (
+          dist <= SHORE_ALERT_DISTANCE_M &&
+          now - lastShoreAlertRef.current > SHORE_ALERT_COOLDOWN_MS
+        ) {
+          lastShoreAlertRef.current = now;
+          safeHaptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning));
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: "Наближаваш брега",
+              body: `~${Math.round(dist)} м до брега`,
+              sound: true,
+            },
+            trigger: null,
+          });
+        }
+      } catch (e) {
+        console.warn("shore distance check failed", e);
+      }
+    };
+
+    check();
+    const interval = setInterval(check, SHORE_CHECK_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [mode, isTracking, isPaused, currentLocation, safeHaptic]);
 
   const handleRecenter = useCallback(() => {
     if (!currentLocation) return;
@@ -906,6 +972,15 @@ try {
             <View style={[styles.recordingBadge, isPaused && styles.recordingBadgePaused]} pointerEvents="none">
               <View style={[styles.recordingDot, isPaused && styles.recordingDotPaused]} />
               <Text style={styles.recordingText}>{isPaused ? "На пауза" : t("tracking")}</Text>
+            </View>
+          )}
+
+          {mode === "boat" && isTracking && distanceToShore !== null && (
+            <View style={styles.shoreBadge} pointerEvents="none">
+              <MaterialCommunityIcons name="waves" size={14} color={colors.onSurfaceTertiary} />
+              <Text style={styles.shoreBadgeText}>
+                {distanceToShore < 1000 ? `${Math.round(distanceToShore)} м` : `${(distanceToShore / 1000).toFixed(1)} км`} до брега
+              </Text>
             </View>
           )}
   
@@ -1321,6 +1396,18 @@ const styles = StyleSheet.create({
   recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#fff" },
   recordingBadgePaused: { backgroundColor: "rgba(120,120,120,0.95)" },
   recordingDotPaused: { backgroundColor: "#e5e5e5" },
+  shoreBadge: {
+    alignSelf: "center",
+    marginTop: spacing.xs,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(18,18,18,0.85)",
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
+    gap: 4,
+  },
+  shoreBadgeText: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "700" },
   topButtonsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
