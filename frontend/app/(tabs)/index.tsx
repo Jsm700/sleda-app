@@ -549,7 +549,10 @@ try {
       ? await reverseGeocode(finalPoints[0].latitude, finalPoints[0].longitude)
       : null;
     const markerCounts: Record<string, number> = {};
-    for (const m of finalMarkers) markerCounts[m.type] = (markerCounts[m.type] || 0) + 1;
+    for (const m of finalMarkers) {
+      if (m.type === "start" || m.type === "end") continue; // every trip has exactly one of each - not worth naming
+      markerCounts[m.type] = (markerCounts[m.type] || 0) + 1;
+    }
     const MARKER_PLURAL_BG: Record<string, string> = {
       car: "коли/лодки",
       fish: "риби",
@@ -847,7 +850,11 @@ try {
   // if we drift within alert range, with a cooldown so it doesn't repeat
   // every 30s once already close to shore.
   useEffect(() => {
-    if (mode !== "boat" || !isTracking || isPaused || !currentLocation || shoreAlertMode === "off") {
+    // The distance indicator itself always runs while boat-mode tracking is
+    // active, regardless of whether alerts are configured - the alert
+    // setting only controls whether a notification fires, not whether we
+    // compute/display the distance.
+    if (mode !== "boat" || !isTracking || isPaused || !currentLocation) {
       return;
     }
     let cancelled = false;
@@ -860,6 +867,7 @@ try {
         });
         if (cancelled || dist === null) return;
         setDistanceToShore(dist);
+        if (shoreAlertMode === "off") return;
         const now = Date.now();
         const triggered =
           shoreAlertMode === "closer"
@@ -871,8 +879,8 @@ try {
           const distText = dist < 1000 ? `${Math.round(dist)} м` : `${(dist / 1000).toFixed(1)} км`;
           await Notifications.scheduleNotificationAsync({
             content: {
-              title: shoreAlertMode === "closer" ? "Наближаваш брега" : "Отдалечаваш се от брега",
-              body: `${distText} до брега`,
+              title: shoreAlertMode === "closer" ? t("shoreNotifTitleCloser") : t("shoreNotifTitleFarther"),
+              body: `${distText} ${t("shoreBadgeSuffix")}`,
               sound: true,
             },
             trigger: null,
@@ -1009,8 +1017,8 @@ try {
               <MaterialCommunityIcons name="waves" size={14} color={colors.onSurfaceTertiary} />
               <Text style={styles.shoreBadgeText}>
                 {isTracking && distanceToShore !== null
-                  ? `${distanceToShore < 1000 ? `${Math.round(distanceToShore)} м` : `${(distanceToShore / 1000).toFixed(1)} км`} до брега`
-                  : "Известия за брега"}
+                  ? `${distanceToShore < 1000 ? `${Math.round(distanceToShore)} ${t("shoreUnitM")}` : `${(distanceToShore / 1000).toFixed(1)} ${t("shoreUnitKm")}`} ${t("shoreBadgeSuffix")}`
+                  : t("shoreBadgeDefault")}
               </Text>
               <MaterialCommunityIcons name="cog-outline" size={12} color={colors.onSurfaceTertiary} />
             </Pressable>
@@ -1391,37 +1399,37 @@ try {
         <View style={styles.modalRoot}>
           <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Известия за брега</Text>
+              <Text style={styles.modalTitle}>{t("shoreAlertModalTitle")}</Text>
               <Pressable onPress={() => setShoreSettingsOpen(false)} style={styles.modalClose}>
                 <MaterialCommunityIcons name="close" size={24} color={colors.onSurface} />
               </Pressable>
             </View>
 
-            <Text style={styles.stopFieldLabel}>Кога да ме известиш</Text>
+            <Text style={styles.stopFieldLabel}>{t("shoreAlertWhenLabel")}</Text>
             <View style={styles.pillRowWrap}>
               <Pressable
                 onPress={() => saveShoreAlertSettings("off", shoreAlertThresholdM)}
                 style={[styles.smallPill, shoreAlertMode === "off" && styles.smallPillActive]}
               >
-                <Text style={[styles.smallPillText, shoreAlertMode === "off" && styles.smallPillTextActive]}>Изключено</Text>
+                <Text style={[styles.smallPillText, shoreAlertMode === "off" && styles.smallPillTextActive]}>{t("shoreAlertOff")}</Text>
               </Pressable>
               <Pressable
                 onPress={() => saveShoreAlertSettings("closer", CLOSER_PRESETS_M.includes(shoreAlertThresholdM) ? shoreAlertThresholdM : 200)}
                 style={[styles.smallPill, shoreAlertMode === "closer" && styles.smallPillActive]}
               >
-                <Text style={[styles.smallPillText, shoreAlertMode === "closer" && styles.smallPillTextActive]}>При приближаване</Text>
+                <Text style={[styles.smallPillText, shoreAlertMode === "closer" && styles.smallPillTextActive]}>{t("shoreAlertCloser")}</Text>
               </Pressable>
               <Pressable
                 onPress={() => saveShoreAlertSettings("farther", FARTHER_PRESETS_KM.includes(shoreAlertThresholdM / 1000) ? shoreAlertThresholdM : 10000)}
                 style={[styles.smallPill, shoreAlertMode === "farther" && styles.smallPillActive]}
               >
-                <Text style={[styles.smallPillText, shoreAlertMode === "farther" && styles.smallPillTextActive]}>При отдалечаване</Text>
+                <Text style={[styles.smallPillText, shoreAlertMode === "farther" && styles.smallPillTextActive]}>{t("shoreAlertFarther")}</Text>
               </Pressable>
             </View>
 
             {shoreAlertMode === "closer" && (
               <>
-                <Text style={styles.stopFieldLabel}>На какво разстояние</Text>
+                <Text style={styles.stopFieldLabel}>{t("shoreAlertDistanceLabel")}</Text>
                 <View style={styles.pillRowWrap}>
                   {CLOSER_PRESETS_M.map((m) => (
                     <Pressable
@@ -1429,7 +1437,7 @@ try {
                       onPress={() => saveShoreAlertSettings("closer", m)}
                       style={[styles.smallPill, shoreAlertThresholdM === m && styles.smallPillActive]}
                     >
-                      <Text style={[styles.smallPillText, shoreAlertThresholdM === m && styles.smallPillTextActive]}>{m} м</Text>
+                      <Text style={[styles.smallPillText, shoreAlertThresholdM === m && styles.smallPillTextActive]}>{m} {t("shoreUnitM")}</Text>
                     </Pressable>
                   ))}
                 </View>
@@ -1438,7 +1446,7 @@ try {
 
             {shoreAlertMode === "farther" && (
               <>
-                <Text style={styles.stopFieldLabel}>На какво разстояние</Text>
+                <Text style={styles.stopFieldLabel}>{t("shoreAlertDistanceLabel")}</Text>
                 <View style={styles.pillRowWrap}>
                   {FARTHER_PRESETS_KM.map((km) => (
                     <Pressable
@@ -1446,7 +1454,7 @@ try {
                       onPress={() => saveShoreAlertSettings("farther", km * 1000)}
                       style={[styles.smallPill, shoreAlertThresholdM === km * 1000 && styles.smallPillActive]}
                     >
-                      <Text style={[styles.smallPillText, shoreAlertThresholdM === km * 1000 && styles.smallPillTextActive]}>{km} км</Text>
+                      <Text style={[styles.smallPillText, shoreAlertThresholdM === km * 1000 && styles.smallPillTextActive]}>{km} {t("shoreUnitKm")}</Text>
                     </Pressable>
                   ))}
                 </View>
@@ -1504,16 +1512,18 @@ const styles = StyleSheet.create({
   recordingDotPaused: { backgroundColor: "#e5e5e5" },
   shoreBadge: {
     alignSelf: "center",
-    marginTop: spacing.xs,
+    marginTop: spacing.md,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(18,18,18,0.85)",
-    paddingVertical: 4,
-    paddingHorizontal: spacing.sm,
+    backgroundColor: "rgba(18,18,18,0.92)",
+    borderWidth: 1,
+    borderColor: colors.brand,
+    paddingVertical: 7,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
-    gap: 4,
+    gap: 6,
   },
-  shoreBadgeText: { color: colors.onSurfaceTertiary, fontSize: 11, fontWeight: "700" },
+  shoreBadgeText: { color: colors.onSurface, fontSize: 13, fontWeight: "800" },
   topButtonsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
