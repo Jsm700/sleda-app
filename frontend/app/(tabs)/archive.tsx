@@ -102,6 +102,9 @@ export default function ArchiveScreen() {
         <Pressable onPress={() => setCodeModalOpen(true)} style={styles.codeBtn}>
           <MaterialCommunityIcons name="shield-key-outline" size={20} color={colors.onSurfaceTertiary} />
         </Pressable>
+        <Pressable onPress={() => router.push("/help")} style={styles.codeBtn} testID="help-btn">
+          <MaterialCommunityIcons name="help-circle-outline" size={20} color={colors.onSurfaceTertiary} />
+        </Pressable>
         <View style={styles.langSwitcher}>
           <Pressable
             onPress={() => setLang("bg")}
