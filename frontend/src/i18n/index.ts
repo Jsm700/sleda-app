@@ -88,6 +88,8 @@ const translations = {
     shoreUnitKm: "км",
     shoreNotifTitleCloser: "Наближаваш брега",
     shoreNotifTitleFarther: "Отдалечаваш се от брега",
+    shoreCheckLoading: "Търси брегова линия...",
+    shoreCheckError: "Няма данни за брега наблизо",
   },
   en: {
     appName: "Sleda",
@@ -170,6 +172,8 @@ const translations = {
     shoreUnitKm: "km",
     shoreNotifTitleCloser: "Approaching shore",
     shoreNotifTitleFarther: "Moving away from shore",
+    shoreCheckLoading: "Looking for shoreline...",
+    shoreCheckError: "No shore data nearby",
   },
 } as const;
 
