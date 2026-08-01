@@ -175,6 +175,7 @@ export default function HomeScreen() {
   const [ghostVisible, setGhostVisible] = useState(true);
   const [mapStyle, setMapStyle] = useState<MapTileStyle>("topo");
   const [compassVisible, setCompassVisible] = useState(false);
+  const [mapFullscreen, setMapFullscreen] = useState(false);
   const [mode, setModeState] = useState<"walk" | "boat">("walk");
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [distance, setDistance] = useState(0);
@@ -958,6 +959,19 @@ try {
           mapStyle={mapStyle}
         />
 
+        <Pressable
+          onPress={() => setMapFullscreen((v) => !v)}
+          style={[styles.mainFullscreenBtn, { top: insets.top + spacing.sm }]}
+          testID="main-fullscreen-btn"
+        >
+          <MaterialCommunityIcons
+            name={mapFullscreen ? "fullscreen-exit" : "fullscreen"}
+            size={20}
+            color={colors.onSurface}
+          />
+        </Pressable>
+
+        {!mapFullscreen && (
         <SafeAreaView edges={["top"]} style={styles.topOverlay} pointerEvents="box-none">
           <View style={styles.statusRow}>
             <View style={styles.statusCard}>
@@ -1037,6 +1051,7 @@ try {
           )}
   
         </SafeAreaView>
+        )}
 
         {!currentLocation && permissionStatus === "granted" && (
           <View style={styles.locatingOverlay} pointerEvents="none">
@@ -1080,6 +1095,7 @@ try {
         </Pressable>
       </View>
 
+      {!mapFullscreen && (
       <View style={[styles.controls, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
         <View style={styles.modeRow}>
           <Pressable
@@ -1169,6 +1185,7 @@ try {
           </Text>
         </Pressable>
       </View>
+      )}
 
       <Modal
         visible={ghostModalOpen}
@@ -1536,6 +1553,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   shoreBadgeText: { color: colors.onSurface, fontSize: 13, fontWeight: "800" },
+  mainFullscreenBtn: {
+    position: "absolute",
+    right: spacing.sm,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(18,18,18,0.85)",
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 20,
+  },
   topButtonsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
