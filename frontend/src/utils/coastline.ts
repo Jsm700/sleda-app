@@ -1,7 +1,10 @@
-// Distance-to-shore calculation using OpenStreetMap coastline data via the
-// public Overpass API. Coastline segments near the current position are
-// fetched once and cached (re-fetched only if you move more than
-// CACHE_RADIUS_KM from where they were fetched), then the shortest
+// Distance-to-shore calculation using OpenStreetMap water-body data via the
+// public Overpass API. Covers both sea coastline (natural=coastline, open
+// lines) and lakes/reservoirs (natural=water, closed ways) - a boat on a
+// yazovir/lake needs the same "distance to nearest bank" logic as one at
+// sea, just against a different OSM tag. Segments near the current position
+// are fetched once and cached (re-fetched only if you move more than
+// CACHE_RADIUS_M from where they were fetched), then the shortest
 // point-to-segment distance is computed locally on every check - no
 // network call needed for each individual distance check.
 export type LatLon = { latitude: number; longitude: number };
@@ -25,8 +28,8 @@ function haversine(a: LatLon, b: LatLon): number {
 }
 
 // Approximate point-to-segment distance via a local equirectangular
-// projection - accurate enough for coastal proximity checks over a few km,
-// much cheaper than full great-circle geometry per segment.
+// projection - accurate enough for coastal/lakeshore proximity checks over
+// a few km, much cheaper than full great-circle geometry per segment.
 function distanceToSegment(p: LatLon, seg: CoastlineSegment): number {
   const latRad = (p.latitude * Math.PI) / 180;
   const kx = 111320 * Math.cos(latRad);
@@ -49,8 +52,13 @@ function distanceToSegment(p: LatLon, seg: CoastlineSegment): number {
   return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
 }
 
-async function fetchCoastline(center: LatLon): Promise<CoastlineSegment[]> {
-  const query = `[out:json][timeout:20];way["natural"="coastline"](around:${FETCH_RADIUS_M},${center.latitude},${center.longitude});out geom;`;
+async function fetchWaterBoundaries(center: LatLon): Promise<CoastlineSegment[]> {
+  // natural=coastline: open lines (sea). natural=water (way only, not
+  // relations - covers most single-way lakes/reservoirs, not complex
+  // multipolygon ones): closed rings, whose geometry array already repeats
+  // the first node at the end, so the same consecutive-pair loop naturally
+  // closes the ring without special-casing.
+  const query = `[out:json][timeout:20];(way["natural"="coastline"](around:${FETCH_RADIUS_M},${center.latitude},${center.longitude});way["natural"="water"](around:${FETCH_RADIUS_M},${center.latitude},${center.longitude}););out geom;`;
   const res = await fetch("https://overpass-api.de/api/interpreter", {
     method: "POST",
     body: query,
@@ -73,7 +81,7 @@ export async function getDistanceToShore(point: LatLon): Promise<number | null> 
   const needsFetch = !cachedCenter || haversine(cachedCenter, point) > CACHE_RADIUS_M;
   if (needsFetch) {
     try {
-      const fresh = await fetchCoastline(point);
+      const fresh = await fetchWaterBoundaries(point);
       cachedSegments = fresh;
       cachedCenter = point;
     } catch (e) {
