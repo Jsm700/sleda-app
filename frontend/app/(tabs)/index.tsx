@@ -162,6 +162,7 @@ export default function HomeScreen() {
   const [isTracking, setIsTracking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [distanceToShore, setDistanceToShore] = useState<number | null>(null);
+  const [shoreCheckStatus, setShoreCheckStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [shoreAlertMode, setShoreAlertMode] = useState<ShoreAlertMode>("off");
   const [shoreAlertThresholdM, setShoreAlertThresholdM] = useState<number>(200);
   const [shoreSettingsOpen, setShoreSettingsOpen] = useState(false);
@@ -860,12 +861,18 @@ try {
     let cancelled = false;
 
     const check = async () => {
+      setShoreCheckStatus("loading");
       try {
         const dist = await getDistanceToShore({
           latitude: currentLocation.latitude,
           longitude: currentLocation.longitude,
         });
-        if (cancelled || dist === null) return;
+        if (cancelled) return;
+        if (dist === null) {
+          setShoreCheckStatus("error");
+          return;
+        }
+        setShoreCheckStatus("ok");
         setDistanceToShore(dist);
         if (shoreAlertMode === "off") return;
         const now = Date.now();
@@ -888,6 +895,7 @@ try {
         }
       } catch (e) {
         console.warn("shore distance check failed", e);
+        if (!cancelled) setShoreCheckStatus("error");
       }
     };
 
@@ -1016,9 +1024,13 @@ try {
             >
               <MaterialCommunityIcons name="waves" size={14} color={colors.onSurfaceTertiary} />
               <Text style={styles.shoreBadgeText}>
-                {isTracking && distanceToShore !== null
-                  ? `${distanceToShore < 1000 ? `${Math.round(distanceToShore)} ${t("shoreUnitM")}` : `${(distanceToShore / 1000).toFixed(1)} ${t("shoreUnitKm")}`} ${t("shoreBadgeSuffix")}`
-                  : t("shoreBadgeDefault")}
+                {!isTracking
+                  ? t("shoreBadgeDefault")
+                  : distanceToShore !== null
+                    ? `${distanceToShore < 1000 ? `${Math.round(distanceToShore)} ${t("shoreUnitM")}` : `${(distanceToShore / 1000).toFixed(1)} ${t("shoreUnitKm")}`} ${t("shoreBadgeSuffix")}`
+                    : shoreCheckStatus === "error"
+                      ? t("shoreCheckError")
+                      : t("shoreCheckLoading")}
               </Text>
               <MaterialCommunityIcons name="cog-outline" size={12} color={colors.onSurfaceTertiary} />
             </Pressable>
