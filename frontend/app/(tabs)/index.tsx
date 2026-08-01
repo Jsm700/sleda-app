@@ -1127,7 +1127,7 @@ try {
             color={ghostRoute.length === 0 ? colors.onSurface : colors.brand}
           />
           <Text style={styles.markerLabel}>
-            {ghostRoute.length === 0 ? "Ghost" : (ghostVisible ? "Скрий" : "Покажи")}
+            {ghostRoute.length === 0 ? "Повтори маршрут" : (ghostVisible ? "Скрий" : "Покажи")}
           </Text>
         </Pressable>
         <Pressable
@@ -1159,7 +1159,7 @@ try {
         <View style={styles.modalRoot}>
           <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Ghost Track</Text>
+              <Text style={styles.modalTitle}>Повтори маршрут</Text>
               <Pressable onPress={() => setGhostModalOpen(false)} style={styles.modalClose}>
                 <MaterialCommunityIcons name="close" size={24} color={colors.onSurface} />
               </Pressable>
