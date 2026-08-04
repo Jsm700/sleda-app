@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
@@ -815,6 +815,31 @@ try {
     setSelectedMarker(null);
   }, [selectedMarker]);
 
+  // Live route color-coding by segment (move vs pause), same visual
+  // treatment as the post-save trip detail view, computed on the fly as
+  // new points/pauses come in during an active recording.
+  const liveRouteSegments = useMemo(() => {
+    if (!isTracking) return undefined;
+    const allSegments = [
+      ...segmentsRef.current,
+      {
+        type: currentSegmentTypeRef.current,
+        started_at: new Date(segmentStartTimeRef.current ?? Date.now()).toISOString(),
+        ended_at: new Date().toISOString(),
+      },
+    ];
+    return allSegments.map((seg) => {
+      const startMs = new Date(seg.started_at).getTime();
+      const endMs = new Date(seg.ended_at).getTime();
+      return {
+        points: route.filter((p) => p.timestamp >= startMs && p.timestamp <= endMs),
+        color: seg.type === "pause" ? colors.onSurfaceTertiary : colors.brand,
+        dashed: seg.type === "pause",
+      };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route, isPaused, isTracking]);
+
   const cycleMapStyle = useCallback(() => {
     setMapStyle((s) => (s === "voyager" ? "topo" : s === "topo" ? "satellite" : "voyager"));
   }, []);
@@ -949,6 +974,7 @@ try {
           ref={mapRef}
           initialRegion={initialRegion}
           route={route}
+          routeSegments={liveRouteSegments}
           ghostRoute={ghostVisible ? ghostRoute : []}
           ghostMarkers={ghostVisible ? ghostMarkers : []}
           markers={markers}
