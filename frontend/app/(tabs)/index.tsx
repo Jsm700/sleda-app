@@ -43,6 +43,7 @@ import {
 
 import {
   LOCATION_TASK_NAME,
+  appendManualPoint,
   clearStoredRoute,
   isTrackingActive,
   readActiveTrip,
@@ -603,8 +604,25 @@ try {
     pendingSaveRef.current = null;
   }, [safeHaptic, stopPolling]);
 
-  const togglePause = useCallback(() => {
-    const now = Date.now();
+  const togglePause = useCallback(async () => {
+    let now = Date.now();
+    try {
+      const fresh = await Promise.race([
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+      ]);
+      if (fresh) {
+        now = fresh.timestamp;
+        await appendManualPoint({
+          latitude: fresh.coords.latitude,
+          longitude: fresh.coords.longitude,
+          timestamp: fresh.timestamp,
+        });
+        await refreshFromStorage();
+      }
+    } catch (e) {
+      console.warn("togglePause: could not anchor a fresh GPS point", e);
+    }
     const segDistance = Math.max(0, distance - segmentStartDistanceRef.current);
     segmentsRef.current = [
       ...segmentsRef.current,
@@ -620,7 +638,7 @@ try {
     segmentStartDistanceRef.current = distance;
     setIsPaused((p) => !p);
     safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
-  }, [distance, safeHaptic]);
+  }, [distance, safeHaptic, refreshFromStorage]);
 
   const handleStopConfirmSave = useCallback(() => {
     setStopConfirmOpen(false);

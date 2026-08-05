@@ -58,6 +58,22 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }: LocationTaskB
 
 // Foreground helpers --------------------------------------------------------
 
+// Injects a single point directly into the same AsyncStorage queue the
+// background task writes to. Used by the UI to anchor a fresh GPS fix at an
+// exact moment (e.g. pause/resume) so that segment boundaries always have at
+// least one point, even if the background task hasn't delivered anything yet
+// (Android can batch/delay background location updates by tens of seconds).
+export async function appendManualPoint(point: StoredPoint): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(ACTIVE_ROUTE_KEY);
+    const buf: StoredPoint[] = raw ? JSON.parse(raw) : [];
+    buf.push(point);
+    await AsyncStorage.setItem(ACTIVE_ROUTE_KEY, JSON.stringify(buf));
+  } catch (e) {
+    console.warn("[locationTask] appendManualPoint failed", e);
+  }
+}
+
 export async function readStoredRoute(): Promise<StoredPoint[]> {
   try {
     const raw = await AsyncStorage.getItem(ACTIVE_ROUTE_KEY);
