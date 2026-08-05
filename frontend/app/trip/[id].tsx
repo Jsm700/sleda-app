@@ -12,6 +12,7 @@ import { colors, spacing, radius } from "@/src/theme/colors";
 import { api, type ApiTrip } from "@/src/api/client";
 import { formatDateTime, formatDistance, formatDuration } from "@/src/utils/format";
 import { shareTripAsGpx } from "@/src/utils/gpx";
+import { lerpColor } from "@/src/utils/colorGradient";
 
 const MARKER_COLORS: Record<MarkerType, string> = {
   car: colors.markerCar,
@@ -148,17 +149,39 @@ export default function TripDetailScreen() {
   }));
 
   const segments = trip?.segments ?? [];
+  const tripStartMs = routePoints[0]?.timestamp ?? 0;
+  const tripEndMs = routePoints[routePoints.length - 1]?.timestamp ?? tripStartMs + 1;
+  const tripDurationMs = Math.max(1, tripEndMs - tripStartMs);
+  const GRADIENT_CHUNK_SIZE = 6; // points per colored chunk
+
+  const gradientChunks = (pts: typeof routePoints) => {
+    const chunks: { points: typeof routePoints; color: string; dashed: boolean }[] = [];
+    for (let i = 0; i < pts.length - 1; i += GRADIENT_CHUNK_SIZE - 1) {
+      const chunkPoints = pts.slice(i, i + GRADIENT_CHUNK_SIZE);
+      if (chunkPoints.length < 2) continue;
+      const midTs = chunkPoints[Math.floor(chunkPoints.length / 2)].timestamp;
+      const t = (midTs - tripStartMs) / tripDurationMs;
+      chunks.push({ points: chunkPoints, color: lerpColor(colors.info, colors.error, t), dashed: false });
+    }
+    return chunks.length > 0 ? chunks : [{ points: pts, color: colors.brand, dashed: false }];
+  };
+
   const routeSegmentsDrawing = segments.length > 0
-    ? segments.map((seg) => {
+    ? segments.flatMap((seg) => {
         const startMs = new Date(seg.started_at).getTime();
         const endMs = new Date(seg.ended_at).getTime();
-        return {
-          points: routePoints.filter((p) => p.timestamp >= startMs && p.timestamp <= endMs),
-          color: seg.type === "pause" ? colors.onSurfaceTertiary : colors.brand,
-          dashed: seg.type === "pause",
-        };
+        const segPoints = routePoints.filter((p) => p.timestamp >= startMs && p.timestamp <= endMs);
+        if (seg.type === "pause") {
+          return [{ points: segPoints, color: colors.onSurfaceTertiary, dashed: true }];
+        }
+        // Move segment: split into small chunks, each colored by its
+        // position in the overall trip timeline (start = info/blue, end =
+        // error/red), so the direction of travel reads at a glance.
+        return gradientChunks(segPoints);
       })
-    : undefined;
+    : routePoints.length > 1
+      ? gradientChunks(routePoints) // older trips with no recorded segments
+      : undefined;
 
   const pauseSegments = segments.filter((s) => s.type === "pause");
   const moveSegments = segments.filter((s) => s.type === "move");
