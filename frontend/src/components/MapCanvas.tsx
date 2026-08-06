@@ -1,5 +1,5 @@
 import React from "react";
-import { Platform, StyleSheet } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import MapView, { Polyline, Marker, UrlTile, PROVIDER_DEFAULT, Region } from "react-native-maps";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -96,7 +96,9 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
           flat
           tracksViewChanges={false}
         >
-          <MaterialCommunityIcons name="navigation" size={16} color={brandColor} />
+          <View style={styles.arrowBadge}>
+            <MaterialCommunityIcons name="navigation" size={13} color="#FFFFFF" />
+          </View>
         </Marker>
       ))}
       {(ghostMarkers ?? []).map((m) => (
@@ -126,6 +128,17 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
       ))}
     </MapView>
   );
+});
+
+const styles = StyleSheet.create({
+  arrowBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });
 
 export default MapCanvas;
