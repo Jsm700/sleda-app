@@ -24,6 +24,12 @@ export type RouteSegmentDrawing = {
   dashed?: boolean;
 };
 
+export type DirectionArrow = {
+  latitude: number;
+  longitude: number;
+  rotation: number; // degrees, 0 = north, clockwise
+};
+
 export type MapCanvasProps = {
   initialRegion: {
     latitude: number;
@@ -33,6 +39,7 @@ export type MapCanvasProps = {
   };
   route: RoutePoint[];
   routeSegments?: RouteSegmentDrawing[];
+  directionArrows?: DirectionArrow[];
   ghostRoute?: RoutePoint[];
   ghostMarkers?: MapMarker[];
   markers: MapMarker[];

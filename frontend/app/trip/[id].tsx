@@ -12,6 +12,7 @@ import { colors, spacing, radius } from "@/src/theme/colors";
 import { api, type ApiTrip } from "@/src/api/client";
 import { formatDateTime, formatDistance, formatDuration } from "@/src/utils/format";
 import { shareTripAsGpx } from "@/src/utils/gpx";
+import { computeBearing } from "@/src/utils/bearing";
 
 const MARKER_COLORS: Record<MarkerType, string> = {
   car: colors.markerCar,
@@ -163,6 +164,26 @@ export default function TripDetailScreen() {
   const pauseSegments = segments.filter((s) => s.type === "pause");
   const moveSegments = segments.filter((s) => s.type === "move");
   const hasPauses = pauseSegments.length > 0;
+
+  const ARROW_INTERVAL = 8; // points between arrows — denser trips get more arrows
+  const movePointsForArrows = segments.length > 0
+    ? moveSegments.flatMap((seg) => {
+        const startMs = new Date(seg.started_at).getTime();
+        const endMs = new Date(seg.ended_at).getTime();
+        return routePoints.filter((p) => p.timestamp >= startMs && p.timestamp <= endMs);
+      })
+    : routePoints;
+  const directionArrows = (() => {
+    const arrows: { latitude: number; longitude: number; rotation: number }[] = [];
+    for (let i = 0; i < movePointsForArrows.length - 1; i += ARROW_INTERVAL) {
+      const a = movePointsForArrows[i];
+      const b = movePointsForArrows[Math.min(i + 1, movePointsForArrows.length - 1)];
+      if (a.latitude === b.latitude && a.longitude === b.longitude) continue;
+      arrows.push({ latitude: a.latitude, longitude: a.longitude, rotation: computeBearing(a, b) });
+    }
+    return arrows;
+  })();
+
   const pauseDurationS = pauseSegments.reduce(
     (sum, s) => sum + Math.max(0, (new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 1000),
     0,
@@ -232,6 +253,7 @@ export default function TripDetailScreen() {
             initialRegion={initialRegion}
             route={routePoints}
             routeSegments={routeSegmentsDrawing}
+            directionArrows={directionArrows}
             markers={mapMarkers}
             brandColor={colors.brand}
             markerColorFor={(type) => MARKER_COLORS[type]}

@@ -2,6 +2,7 @@ import React from "react";
 import { Platform, StyleSheet } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import MapView, { Polyline, Marker, UrlTile, PROVIDER_DEFAULT, Region } from "react-native-maps";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MarkerPin from "./MarkerPin";
 
 import type { MapCanvasProps } from "./MapCanvas.types";
@@ -33,7 +34,7 @@ const TILE_STYLES: Record<string, { urlTemplate: string; maximumZ: number }> = {
 };
 
 const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
- { initialRegion, route, routeSegments, ghostRoute, ghostMarkers, markers, brandColor, markerLabelFor, onMarkerPress, mapStyle },
+ { initialRegion, route, routeSegments, directionArrows, ghostRoute, ghostMarkers, markers, brandColor, markerLabelFor, onMarkerPress, mapStyle },
   ref,
 ) {
   const reg: Region = {
@@ -86,6 +87,18 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
       {ghostRoute && ghostRoute.length > 1 && (
         <Polyline coordinates={ghostRoute} strokeColor="#FF00FF" strokeWidth={8} lineDashPattern={[8, 6]} />
       )}
+      {(directionArrows ?? []).map((a, i) => (
+        <Marker
+          key={`arrow-${i}`}
+          coordinate={{ latitude: a.latitude, longitude: a.longitude }}
+          anchor={{ x: 0.5, y: 0.5 }}
+          rotation={a.rotation}
+          flat
+          tracksViewChanges={false}
+        >
+          <MaterialCommunityIcons name="navigation" size={16} color={brandColor} />
+        </Marker>
+      ))}
       {(ghostMarkers ?? []).map((m) => (
         <Marker
           key={`ghost-${m.id}`}
