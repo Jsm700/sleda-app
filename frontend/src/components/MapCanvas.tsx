@@ -94,7 +94,6 @@ const MapCanvas = React.forwardRef<MapView, MapCanvasProps>(function MapCanvas(
           anchor={{ x: 0.5, y: 0.5 }}
           rotation={a.rotation}
           flat
-          tracksViewChanges={false}
         >
           <View style={styles.arrowBadge}>
             <MaterialCommunityIcons name="navigation" size={13} color="#FFFFFF" />
